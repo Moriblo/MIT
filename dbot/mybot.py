@@ -88,7 +88,11 @@ async def on_message(message):
                 except:
                     pass
 
-        await message.channel.send(f"Apaguei {deleted} mensagens do bot.")
+        # Envia a mensagem de confirmação
+        confirmation = await message.channel.send(f"Apaguei {deleted} mensagens do bot.")
+
+        # Apaga a própria mensagem de confirmação depois de 2 segundos
+        await confirmation.delete(delay=2)
         return
 
     # ==========================================
