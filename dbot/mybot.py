@@ -1,56 +1,103 @@
 from dotenv import load_dotenv
-from openai import OpenAI
 import discord
 import os
+import requests
 
-# Load environment variables from .env file
 load_dotenv()
-OPENAI_KEY = os.getenv('OPENAI_KEY')
-DISCORD_TOKEN = os.getenv('TOKEN')
 
-# Initialize the OpenAI client
-openai_client = OpenAI(api_key=OPENAI_KEY)
+DISCORD_TOKEN = os.getenv("TOKEN")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
-def call_openai(question):
-    completion = openai_client.chat.completions.create(
-        model="gpt-4o",
-        messages=[
-             {
-                 "role": "user",
-                 "content": f"Respond like a pirate to the following question:  {question}",
-            },
+def call_groq(question):
+    url = "https://api.groq.com/openai/v1/chat/completions"
+
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {GROQ_API_KEY}"
+    }
+
+    payload = {
+        "model": "llama-3.1-8b-instant",
+        "messages": [
+            {"role": "user", "content": f"Respond like a pirate: {question}"}
         ]
-    )
-    # Print the response
-    response = completion.choices[0].message.content
-    print(response)
-    return response
+    }
+
+    response = requests.post(url, headers=headers, json=payload)
+    data = response.json()
+
+    # ============================
+    # DEBUG COLORIDO (OPÇÃO 3)
+    # ============================
+
+    def color(text, code):
+        return f"\033[{code}m{text}\033[0m"
+
+    print(color("\n=== GROQ RESPONSE ===", "94"))  # azul
+    print(color(f"ID: {data.get('id')}", "92"))     # verde
+    print(color(f"Model: {data.get('model')}", "93"))  # amarelo
+    print(color(f"Tokens: {data.get('usage', {}).get('total_tokens')}", "95"))  # magenta
+    print(color("Message:", "96"))  # ciano
+
+    if "choices" in data:
+        print(color(data["choices"][0]["message"]["content"], "97"))  # branco
+    else:
+        print(color("<< SEM 'choices' — provavelmente erro da API >>", "91"))  # vermelho
+
+    print(color("=====================\n", "94"))
+
+    # ============================
+    # RETORNO PARA O DISCORD
+    # ============================
+
+    if "error" in data:
+        return f"Groq error: {data['error']['message']}"
+
+    return data["choices"][0]["message"]["content"]
 
 
-# Set up discord
+# ============================
+# DISCORD BOT
+# ============================
+
 intents = discord.Intents.default()
-intents.message_content = True  
-client = discord.Client(intents=intents)
+intents.message_content = True
+bot = discord.Client(intents=intents)
 
-@client.event
+@bot.event
 async def on_ready():
-    print('We have logged in as {0.user}'.format(client))
+    print(f"We have logged in as {bot.user}")
 
-@client.event
+@bot.event
 async def on_message(message):
-    if message.author == client.user:
+    if message.author == bot.user:
         return
 
-    if message.content.startswith('$hello'):
-        await message.channel.send('Hello!')
+    # ==========================================
+    # COMANDO: LIMPAR TODAS AS MENSAGENS DO BOT
+    # ==========================================
 
-    if message.content.startswith('$question'):
-        print(f"Message: {message.content}")                
-        message_content = message.content.split("$question")[1]
-        print(f"Question: {message_content}")    
-        response = call_openai(message_content)   
-        print(f"Assistant: {response}")    
-        print("---")
+    if message.content.startswith("$clear_bot"):
+        deleted = 0
+
+        async for msg in message.channel.history(limit=None):
+            if msg.author == bot.user:
+                try:
+                    await msg.delete()
+                    deleted += 1
+                except:
+                    pass
+
+        await message.channel.send(f"Apaguei {deleted} mensagens do bot.")
+        return
+
+    # ==========================================
+    # COMANDO NORMAL DO BOT
+    # ==========================================
+
+    if message.content.startswith("$question"):
+        user_question = message.content.split("$question", 1)[1].strip()
+        response = call_groq(user_question)
         await message.channel.send(response)
 
-client.run(DISCORD_TOKEN)
+bot.run(DISCORD_TOKEN)
