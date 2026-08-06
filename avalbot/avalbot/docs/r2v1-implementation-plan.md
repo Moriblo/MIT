@@ -1,5 +1,3 @@
----
-
 # Initial Scope Definition (R2V1 Baseline)
 
 ## Purpose
@@ -16,30 +14,91 @@ This section is maintained to preserve the original planning history of the rele
 
 ## R2V1 Baseline Scope
 
+### Phase F1 - Planning & Repository Setup
+
 | ID | Description | Status |
 |----|-------------|---------|
-| AB-001 | Create repository structure | ⬜ Planned |
-| AB-002 | Create personas.json | ⬜ Planned |
-| AB-003 | Create sessions.json | ⬜ Planned |
-| AB-004 | Create persona_service.py | ⬜ Planned |
-| AB-005 | Create session_service.py | ⬜ Planned |
-| AB-006 | Create groq_service.py | ⬜ Planned |
-| AB-007 | Create command_service.py | ⬜ Planned |
-| AB-008 | Implement command $perfis | ⬜ Planned |
-| AB-009 | Implement command $perfil | ⬜ Planned |
-| AB-010 | Implement command $ajuda | ⬜ Planned |
-| AB-011 | Implement command $whoami | ⬜ Planned |
-| AB-012 | Integrate services with Discord | ⬜ Planned |
-| AB-013 | Execute functional tests | ⬜ Planned |
-| AB-014 | Publish Release R2V1 | ⬜ Planned |
-| AB-015 | Prepare Azure environment | ⬜ Planned |
-| AB-016 | Deploy AvalBot 24x7 on Azure | ⬜ Planned |
+| AB-001 | Create GitHub Project "avalbot" | ⬜ Planned |
+| AB-002 | Create README.md | ✅ Completed |
+| AB-003 | Create repository structure | 🟨 In Progress |
+
+---
+
+### Phase F2 - Persona Definition
+
+| ID | Description | Status |
+|----|-------------|---------|
+| AB-004 | Create docs/personas.md | ⬜ Planned |
+
+---
+
+### Phase F3 - Configuration Structure
+
+| ID | Description | Status |
+|----|-------------|---------|
+| AB-005 | Create personas.json | ⬜ Planned |
+| AB-006 | Create sessions.json | ⬜ Planned |
+
+---
+
+### Phase F4 - Core Services
+
+| ID | Description | Status |
+|----|-------------|---------|
+| AB-007 | Create persona_service.py | ⬜ Planned |
+| AB-008 | Create session_service.py | ⬜ Planned |
+| AB-009 | Create groq_service.py | ⬜ Planned |
+
+---
+
+### Phase F5 - Command Layer
+
+| ID | Description | Status |
+|----|-------------|---------|
+| AB-010 | Create command_service.py | ⬜ Planned |
+| AB-011 | Implement command $perfis | ⬜ Planned |
+| AB-012 | Implement command $perfil | ⬜ Planned |
+| AB-013 | Implement command $ajuda | ⬜ Planned |
+| AB-014 | Implement command $whoami | ⬜ Planned |
+
+---
+
+### Phase F6 - Discord Integration
+
+| ID | Description | Status |
+|----|-------------|---------|
+| AB-015 | Integrate services with Discord | ⬜ Planned |
+
+---
+
+### Phase F7 - Testing
+
+| ID | Description | Status |
+|----|-------------|---------|
+| AB-016 | Execute functional tests | ⬜ Planned |
+
+---
+
+### Phase F8 - Release Packaging
+
+| ID | Description | Status |
+|----|-------------|---------|
+| AB-017 | Publish Release R2V1 | ⬜ Planned |
+
+---
+
+### Phase F9 - Azure Deployment
+
+| ID | Description | Status |
+|----|-------------|---------|
+| AB-018 | Prepare Azure environment | ⬜ Planned |
+| AB-019 | Deploy AvalBot 24x7 on Azure | ⬜ Planned |
 
 ---
 
 ## Deliverables
 
-At the conclusion of R2V1 the following artifacts must exist:
+At the conclusion of R2V1 the following artifacts must exist.
 
 ### Documentation
 
@@ -89,10 +148,10 @@ Changes introduced during development must be managed through the GitHub Project
 
 Objectives:
 
-- Preserve planning history.
-- Provide traceability.
-- Enable planned-versus-delivered analysis.
-- Support future release retrospectives.
+- Preserve planning history
+- Provide traceability
+- Enable planned-versus-delivered analysis
+- Support future release retrospectives
 
 ---
 
@@ -100,12 +159,10 @@ Objectives:
 
 Release R2V1 will be considered complete when:
 
-- All baseline items are delivered.
-- All acceptance criteria are approved.
-- Functional tests are successful.
-- The bot is operational on Discord.
-- Personas are externally configurable.
-- User sessions are persisted.
-- The solution is running continuously on Azure.
-
----
+- All baseline items are delivered
+- All acceptance criteria are approved
+- Functional tests are successful
+- The bot is operational on Discord
+- Personas are externally configurable
+- User sessions are persisted
+- The solution is running continuously on Azure
