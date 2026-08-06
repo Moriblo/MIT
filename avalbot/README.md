@@ -332,7 +332,7 @@ AI Governance Specialist.
 
 ---
 
-## 🏴 Pirate
+## 🏴‍☠️ Pirate
 
 ### Purpose
 
