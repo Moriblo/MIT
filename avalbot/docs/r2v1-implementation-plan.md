@@ -18,7 +18,7 @@ This section is maintained to preserve the original planning history of the rele
 
 | ID | Description | Status |
 |----|-------------|---------|
-| AB-001 | Create GitHub Project "avalbot" | ⬜ Planned |
+| AB-001 | Create GitHub Project "avalbot" | ✅ Completed |
 | AB-002 | Create README.md | ✅ Completed |
 | AB-003 | Create repository structure | 🟨 In Progress |
 
