@@ -1,3 +1,4 @@
+````markdown
 # AvalBot
 
 > Multi-Persona AI Platform powered by Discord + Groq
@@ -129,44 +130,6 @@ AI Governance Specialist.
 
 ---
 
-## 🏴‍☠️ The Mo Pirate
-
-### Purpose
-
-Creative and entertaining specialist.
-
-### Characteristics
-
-- Intelligent
-- Friendly
-- Creative
-- Humorous
-- Respectful
-
-### Restrictions
-
-Never use:
-
-- Roleplay
-- Stage directions
-- Narration
-
-Examples of prohibited output:
-
-(in pirate accent)
-
-(smiles)
-
-(pauses)
-
-(draws sword)
-
-### Expected Style
-
-Natural conversation with light pirate flavor.
-
----
-
 # Architecture
 
 ```text
@@ -249,13 +212,6 @@ Example:
     "emoji": "🏛️",
     "description": "AI Governance Specialist",
     "prompt": "..."
-  },
-
-  "mopirate": {
-    "name": "The Mo Pirate",
-    "emoji": "🏴‍☠️",
-    "description": "Creative pirate specialist",
-    "prompt": "..."
   }
 }
 ```
@@ -281,7 +237,7 @@ Example:
   },
 
   "987654321": {
-    "active_profile": "mopirate"
+    "active_profile": "governanca"
   }
 }
 ```
@@ -372,6 +328,12 @@ No hardcoded user lists are allowed.
 
 ---
 
+## RB011
+
+All personas must be externally configured.
+
+---
+
 # Commands
 
 ## List Available Profiles
@@ -409,7 +371,7 @@ $perfil governanca
 ## One-Time Question
 
 ```text
-$perfil mopirate What do you think about AI governance?
+$perfil governanca What do you think about AI governance?
 ```
 
 ---
@@ -611,6 +573,7 @@ Done
 | AB-008 | Create handbook |
 | AB-009 | Architecture documentation |
 | AB-010 | Publish R2V1 |
+| AB-011 | Create dynamic persona framework |
 
 ---
 
@@ -621,3 +584,4 @@ Moacyr Ribeiro Blondet
 Developed as part of ongoing studies involving Artificial Intelligence, AI Governance, Conversational Systems and Specialized Digital Agents.
 
 ---
+````
