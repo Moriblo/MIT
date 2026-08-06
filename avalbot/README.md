@@ -1,4 +1,3 @@
-````markdown
 # AvalBot
 
 > Multi-Persona AI Platform powered by Discord + Groq
@@ -584,4 +583,3 @@ Moacyr Ribeiro Blondet
 Developed as part of ongoing studies involving Artificial Intelligence, AI Governance, Conversational Systems and Specialized Digital Agents.
 
 ---
-````
