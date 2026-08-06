@@ -1,269 +1,195 @@
-````markdown
 # AvalBot
 
-> Plataforma Multi-Persona baseada em Discord + Groq desenvolvida no contexto dos estudos e experimentações em Inteligência Artificial, Governança de IA e Sistemas Conversacionais realizados durante o programa MIT.
+> Multi-Persona AI Platform powered by Discord + Groq
+
+![Status](https://img.shields.io/badge/status-R2V1%20Design-blue)
+![Platform](https://img.shields.io/badge/platform-Discord-5865F2)
+![LLM](https://img.shields.io/badge/LLM-Groq-orange)
+![Hosting](https://img.shields.io/badge/Hosting-Azure-0078D4)
 
 ---
 
-# Visão
+# Vision
 
-O AvalBot é uma plataforma conversacional que permite que um único bot Discord represente múltiplas personas especializadas, cada uma com identidade, conhecimento, estilo de comunicação e propósito próprios.
+AvalBot is a multi-persona conversational platform designed to explore Generative AI, AI Governance, Digital Specialists and Human-AI Interaction.
 
-O objetivo é criar um ambiente flexível onde usuários possam:
+The platform allows a single Discord bot to dynamically assume different expert personas, each with its own identity, expertise, communication style and knowledge domain.
 
-- Conversar com especialistas distintos.
-- Comparar perspectivas sobre um mesmo tema.
-- Explorar diferentes abordagens para resolução de problemas.
-- Avaliar aplicações práticas de IA Generativa.
-- Experimentar conceitos de Governança de IA.
-- Evoluir progressivamente para um marketplace de especialistas digitais.
+Users can:
 
----
-
-# Objetivos Estratégicos
-
-## Curto Prazo
-
-- Criar um bot multi-persona.
-- Utilizar Groq como mecanismo de inferência.
-- Operar em um único servidor Discord.
-- Operar em um único canal principal.
-- Permitir seleção dinâmica de personas.
-- Persistir contexto de perfil por usuário.
-
-## Médio Prazo
-
-- Controle de acesso baseado em Roles do Discord.
-- Comparação entre múltiplas personas.
-- Métricas de uso.
-- Observabilidade.
-
-## Longo Prazo
-
-- Marketplace de especialistas.
-- Personas plugáveis.
-- Governança completa de IA.
-- Framework de agentes especializados.
+- Interact with specialized digital experts.
+- Compare perspectives from different personas.
+- Explore AI Governance concepts.
+- Experiment with prompt engineering techniques.
+- Evaluate multi-agent conversational patterns.
+- Build a foundation for future AI specialist marketplaces.
 
 ---
 
-# Conceitos Fundamentais
+# Project Context
 
-## Persona
+AvalBot is being developed as part of the practical activities associated with studies conducted in the MIT program.
 
-Uma persona representa um especialista digital.
+The project serves as a laboratory for:
 
-Cada persona possui:
-
-- Nome
-- Emoji (Moji)
-- Descrição
-- Prompt
-- Estilo de comunicação
-- Especialidades
-- Configurações do modelo
-
-Exemplo:
-
-```text
-🏛️ Governança IA
-```
-
-ou
-
-```text
-🏴‍☠️ The Mo Pirate
-```
+- Generative AI
+- AI Governance
+- Conversational Systems
+- Prompt Engineering
+- Human-AI Interaction
+- Specialized AI Agents
 
 ---
 
-## Perfil Ativo
+# Core Principles
 
-Todo usuário possui exatamente um perfil ativo.
+## Simplicity
 
-O perfil ativo é utilizado quando o usuário envia perguntas sem especificar explicitamente uma persona.
+One bot.
 
-Exemplo:
+One server.
 
-```text
-$perfil governanca
-```
+One primary channel.
 
-Após a seleção:
-
-```text
-Como implementar IA responsável?
-```
-
-A consulta será executada utilizando o perfil Governança IA.
+Multiple personas.
 
 ---
 
-## Consulta Pontual
+## Extensibility
 
-Permite utilizar uma persona sem alterar o perfil ativo.
-
-Exemplo:
-
-```text
-$perfil mopirate Como implementar IA responsável?
-```
-
-Neste caso:
-
-- A pergunta utiliza The Mo Pirate.
-- O perfil ativo do usuário permanece inalterado.
+New personas must be created without modifying application code.
 
 ---
 
-## Consulta Comparativa
+## Governance
 
-Permite comparar respostas de múltiplas personas.
+Identity and authorization must be delegated to Discord.
 
-Exemplo:
-
-```text
-$compare default,governanca,mopirate Como a IA impactará a sociedade?
-```
-
-Retorno esperado:
-
-```text
-🧭 Aval
-...
-
-🏛️ Governança IA
-...
-
-🏴‍☠️ The Mo Pirate
-...
-```
+No internal credential management.
 
 ---
 
-# Personas Iniciais
+## Scalability
 
-## 1. Aval (Padrão)
+The architecture must support future migration toward:
 
-### Emoji
-
-🧭
-
-### Objetivo
-
-Assistente geral do sistema.
-
-### Características
-
-- Equilibrado
-- Neutro
-- Cordial
-- Didático
-- Generalista
-
-### Casos de Uso
-
-- Perguntas gerais
-- Orientações
-- Explicações
-- Pesquisa
+- Multi-agent systems
+- Marketplace of specialists
+- Additional communication channels
+- Enterprise governance
 
 ---
 
-## 2. Governança IA
+# Initial Personas
 
-### Emoji
+## 🧭 Aval
 
-🏛️
+### Purpose
 
-### Objetivo
+General-purpose assistant.
 
-Especialista em Governança de IA.
+### Characteristics
 
-### Especialidades
+- Neutral
+- Helpful
+- Balanced
+- Didactic
+- Generalist
 
-- IA Responsável
-- IA Confiável
+### Default Profile
+
+All new users receive this profile automatically.
+
+---
+
+## 🏛️ Governança IA
+
+### Purpose
+
+AI Governance Specialist.
+
+### Expertise
+
+- Responsible AI
+- Trustworthy AI
+- AI Risk Management
 - Compliance
 - LGPD
 - ISO 42001
 - NIST AI RMF
-- Ética
-- Regulamentação
-- Gestão de Riscos
+- AI Regulation
+- Ethics
 
-### Características
+### Communication Style
 
-- Executivo
-- Consultivo
-- Estratégico
-- Estruturado
+- Executive
+- Strategic
+- Structured
+- Consultative
 
 ---
 
-## 3. The Mo Pirate
+## 🏴‍☠️ The Mo Pirate
 
-### Emoji
+### Purpose
 
-🏴‍☠️
+Creative and entertaining specialist.
 
-### Objetivo
+### Characteristics
 
-Especialista descontraído e criativo.
+- Intelligent
+- Friendly
+- Creative
+- Humorous
+- Respectful
 
-### Características
+### Restrictions
 
-- Inteligente
-- Divertido
-- Educado
-- Criativo
-- Leve humor náutico
-
-### Restrições
-
-Não utilizar:
+Never use:
 
 - Roleplay
-- Encenações
-- Ações entre parênteses
+- Stage directions
+- Narration
 
-Exemplos proibidos:
+Examples of prohibited output:
 
-```text
-(pauses)
-(smiles)
 (in pirate accent)
-```
+
+(smiles)
+
+(pauses)
+
+(draws sword)
+
+### Expected Style
+
+Natural conversation with light pirate flavor.
 
 ---
 
-# Arquitetura Conceitual
+# Architecture
 
 ```text
 Discord
-    │
-    └── Canal #aval
-            │
-            ├── Usuário A
-            ├── Usuário B
-            ├── Usuário C
-            │
-            ▼
-        AvalBot
-            │
-            ▼
-     Persona Service
-            │
-            ▼
-      Session Service
+   │
+   ▼
+AvalBot
+   │
+   ├── Command Service
+   │
+   ├── Persona Service
+   │
+   ├── Session Service
+   │
+   └── Groq Service
             │
             ▼
-        Groq API
+          Groq
 ```
 
 ---
 
-# Estrutura Inicial do Repositório
+# Repository Structure
 
 ```text
 MIT/
@@ -276,7 +202,7 @@ MIT/
     │
     ├── src/
     │   ├── main.py
-    │   ├── commands.py
+    │   ├── command_service.py
     │   ├── discord_service.py
     │   ├── groq_service.py
     │   ├── persona_service.py
@@ -285,8 +211,8 @@ MIT/
     ├── docs/
     │   ├── architecture.md
     │   ├── roadmap.md
-    │   ├── business-rules.md
-    │   └── personas.md
+    │   ├── personas.md
+    │   └── business-rules.md
     │
     └── releases/
         ├── r2v1/
@@ -297,36 +223,38 @@ MIT/
 
 ---
 
-# Estrutura das Personas
+# Personas Configuration
 
-Arquivo:
+Personas are stored externally.
+
+File:
 
 ```text
 personas.json
 ```
 
-Exemplo:
+Example:
 
 ```json
 {
   "default": {
     "name": "Aval",
     "emoji": "🧭",
-    "description": "Assistente geral.",
+    "description": "General assistant",
     "prompt": "..."
   },
 
   "governanca": {
     "name": "Governança IA",
     "emoji": "🏛️",
-    "description": "Especialista em Governança de IA.",
+    "description": "AI Governance Specialist",
     "prompt": "..."
   },
 
   "mopirate": {
     "name": "The Mo Pirate",
     "emoji": "🏴‍☠️",
-    "description": "Pirata inteligente e divertido.",
+    "description": "Creative pirate specialist",
     "prompt": "..."
   }
 }
@@ -334,20 +262,22 @@ Exemplo:
 
 ---
 
-# Estrutura das Sessões
+# User Sessions
 
-Arquivo:
+User preferences are persisted locally.
+
+File:
 
 ```text
 sessions.json
 ```
 
-Exemplo:
+Example:
 
 ```json
 {
   "123456789": {
-    "active_profile": "governanca"
+    "active_profile": "default"
   },
 
   "987654321": {
@@ -358,99 +288,93 @@ Exemplo:
 
 ---
 
-# Regras de Negócio
+# Business Rules
 
 ## RB001
 
-Todo usuário possui exatamente um perfil ativo.
+Every user has exactly one active profile.
 
 ---
 
 ## RB002
 
-Novos usuários recebem automaticamente o perfil:
+New users receive:
 
-```text
-Aval
-```
+🧭 Aval
+
+as their default profile.
 
 ---
 
 ## RB003
 
-Perguntas sem comando utilizam o perfil ativo.
+Questions without commands use the active profile.
 
 ---
 
 ## RB004
 
-O comando:
+Command:
 
 ```text
-$perfil <nome>
+$perfil <profile>
 ```
 
-altera o perfil ativo.
+changes the active profile.
 
 ---
 
 ## RB005
 
-O comando:
+Command:
 
 ```text
-$perfil <nome> <pergunta>
+$perfil <profile> <question>
 ```
 
-não altera o perfil ativo.
+uses the specified profile without changing the active profile.
 
 ---
 
 ## RB006
 
-O comando:
+Command:
 
 ```text
 $compare
 ```
 
-não altera o perfil ativo.
+never changes the active profile.
 
 ---
 
 ## RB007
 
-Perfis disponíveis são determinados pelos Roles do Discord.
+Discord is the only identity provider.
 
 ---
 
 ## RB008
 
-O sistema não manterá credenciais próprias.
+No user credentials are stored by AvalBot.
 
 ---
 
 ## RB009
 
-O Discord é a única fonte de autenticação.
+Authorization is based on Discord Roles.
 
 ---
 
 ## RB010
 
-Não haverá listas de usuários hardcoded.
+No hardcoded user lists are allowed.
 
 ---
 
-## RB011
+# Commands
 
-Todas as personas serão configuradas externamente.
-
----
-
-# Comandos
-
-## Listar Perfis
+## List Available Profiles
 
 ```text
 $perfis
@@ -458,7 +382,7 @@ $perfis
 
 ---
 
-## Ajuda Geral
+## General Help
 
 ```text
 $ajuda
@@ -466,7 +390,7 @@ $ajuda
 
 ---
 
-## Ajuda da Persona
+## Persona Help
 
 ```text
 $ajuda governanca
@@ -474,7 +398,7 @@ $ajuda governanca
 
 ---
 
-## Alterar Perfil Ativo
+## Change Active Profile
 
 ```text
 $perfil governanca
@@ -482,136 +406,180 @@ $perfil governanca
 
 ---
 
-## Consulta Pontual
+## One-Time Question
 
 ```text
-$perfil governanca Como implementar IA responsável?
+$perfil mopirate What do you think about AI governance?
 ```
 
 ---
 
-## Consulta Utilizando Perfil Ativo
+## Active Profile Question
 
 ```text
-Como implementar IA responsável?
+What do you think about AI governance?
 ```
 
 ---
 
-## Consulta Comparativa
+## User Information
 
 ```text
-$compare default,governanca,mopirate Como a IA impactará a sociedade?
+$whoami
 ```
+
+Displays:
+
+- Discord username
+- Active profile
+- Discord roles
+- Available personas
 
 ---
 
-# Integração Discord
+# Hosting Strategy
 
-## Canal Principal
+## Development
 
-```text
-#aval
-```
+Local machine.
 
 ---
 
-## Canal de Boas-Vindas
+## Validation
 
-```text
-#bem-vindos
-```
-
-Conteúdo:
-
-- Apresentação do sistema
-- Personas disponíveis
-- Exemplos de comandos
-- Regras de uso
+Discord Test Server.
 
 ---
 
-# Roadmap
+## Production
 
-## Release R2V1
+Microsoft Azure Virtual Machine.
 
-### Objetivo
+### Objective
 
-Fundação Multi-Persona.
+Provide:
 
-### Entregas
+- 24x7 availability
+- Continuous operation
+- Centralized deployment
+- Single execution environment
 
-- Personas em JSON
-- Sessões persistidas
-- Perfil ativo
-- $perfis
+### Initial Deployment Target
+
+Azure VM
+
+Ubuntu Linux
+
+Python Runtime
+
+Systemd Service
+
+---
+
+# Observability Roadmap
+
+Future releases will support:
+
+- Usage statistics
+- Persona metrics
+- Token consumption
+- User activity
+- Audit logs
+
+---
+
+# Release Roadmap
+
+## R2V1
+
+### Foundation
+
+Features:
+
+- External personas
+- User sessions
+- Active profile
 - $perfil
+- $perfis
 - $ajuda
+- $whoami
+
+Status:
+
+🚧 In Design
 
 ---
 
-## Release R2V2
+## R2V2
 
-### Objetivo
+### Governance
 
-Governança e Segurança.
+Features:
 
-### Entregas
+- Discord Roles
+- Authorization
+- Structured logs
+- Audit support
 
-- Roles Discord
-- Controle de acesso
-- Logs estruturados
-- Auditoria
+Status:
+
+Planned
 
 ---
 
-## Release R2V3
+## R2V3
 
-### Objetivo
+### Comparative Intelligence
 
-Análise Comparativa.
-
-### Entregas
+Features:
 
 - $compare
-- Múltiplas respostas
-- Métricas por persona
+- Multi-persona answers
+- Comparative analysis
+
+Status:
+
+Planned
 
 ---
 
-## Release R2V4
+## R2V4
 
-### Objetivo
+### Observability
 
-Observabilidade.
+Features:
 
-### Entregas
+- Metrics
+- Dashboards
+- Monitoring
+- Telemetry
 
-- Estatísticas
-- Dashboard
-- Consumo Groq
-- Telemetria
+Status:
+
+Planned
 
 ---
 
-## Release R3V0
+## R3V0
 
-### Objetivo
+### Specialist Marketplace
 
-Marketplace de Especialistas.
+Features:
 
-### Entregas
+- Plug-in personas
+- Persona catalog
+- Dynamic installation
+- Agent framework
 
-- Personas plugáveis
-- Catálogo de especialistas
-- Instalação dinâmica
-- Framework de agentes
+Status:
+
+Future
 
 ---
 
 # GitHub Project
 
-Projeto:
+Project Name:
 
 ```text
 avalbot
@@ -629,60 +597,27 @@ Done
 
 ---
 
-# Backlog Inicial
+# Initial Backlog
 
-## AB-001
-
-Criar personas.json
-
-## AB-002
-
-Criar Session Service
-
-## AB-003
-
-Implementar comando $perfis
-
-## AB-004
-
-Implementar comando $perfil
-
-## AB-005
-
-Implementar comando $ajuda
-
-## AB-006
-
-Persistência de sessões
-
-## AB-007
-
-Refatorar integração Groq
-
-## AB-008
-
-Criar handbook automático
-
-## AB-009
-
-Documentar arquitetura
-
-## AB-010
-
-Publicar Release R2V1
+| ID | Description |
+|------|------|
+| AB-001 | Create personas.json |
+| AB-002 | Create session service |
+| AB-003 | Implement $perfis |
+| AB-004 | Implement $perfil |
+| AB-005 | Implement $ajuda |
+| AB-006 | Persist sessions |
+| AB-007 | Refactor Groq integration |
+| AB-008 | Create handbook |
+| AB-009 | Architecture documentation |
+| AB-010 | Publish R2V1 |
 
 ---
 
-# Licença
-
-Em definição.
-
----
-
-# Autor
+# Author
 
 Moacyr Ribeiro Blondet
 
-Projeto desenvolvido no contexto dos estudos realizados no MIT sobre Inteligência Artificial, Governança de IA, Sistemas Conversacionais e Agentes Especializados.
-````
+Developed as part of ongoing studies involving Artificial Intelligence, AI Governance, Conversational Systems and Specialized Digital Agents.
 
+---
