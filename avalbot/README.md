@@ -286,7 +286,7 @@ Architecture must support future evolution toward:
 
 # Initial Personas
 
-## 🧭 Aval
+## ✔️ Aval
 
 ### Purpose
 
