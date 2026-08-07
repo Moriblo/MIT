@@ -28,7 +28,7 @@ This section is maintained to preserve the original planning history of the rele
 
 | ID | Description | Status |
 |----|-------------|---------|
-| AB-004 | Create docs/personas.md | ⬜ Planned |
+| AB-004 | Create docs/personas.md | ✅ Completed |
 
 ---
 
