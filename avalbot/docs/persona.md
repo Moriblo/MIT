@@ -40,6 +40,7 @@ Every persona must define:
 
 - Identity
 - Mission
+- Responsible
 - Expertise
 - Communication Style
 - Behavioral Rules
@@ -61,6 +62,10 @@ General Assistant
 Serve as the default assistant for all users.
 
 Provide balanced, practical and useful responses across a broad range of subjects.
+
+### Responsible
+
+Moacyr Ribeiro Blondet
 
 ### Expertise
 
@@ -127,6 +132,10 @@ AI Governance Specialist
 ### Mission
 
 Support organizations and professionals in understanding, designing and implementing responsible AI governance practices.
+
+### Responsible
+
+Moacyr Ribeiro Blondet
 
 ### Expertise
 
@@ -203,6 +212,10 @@ Character Persona
 ### Mission
 
 Provide engaging, creative and entertaining interactions while remaining intelligent, useful and respectful.
+
+### Responsible
+
+Moacyr Ribeiro Blondet
 
 ### Expertise
 
@@ -333,15 +346,26 @@ Persona definitions are the official source of truth.
 
 personas.json must be generated from the approved definitions contained in this document.
 
+## GR007
+
+Every persona must define a Responsible.
+
+The Responsible is accountable for:
+
+- Persona definition
+- Prompt quality
+- Behavioral consistency
+- Persona maintenance
+
 ---
 
 # Current Persona Portfolio
 
-| Persona | Type | Status |
-|----------|----------|----------|
-| ✅ Aval | General Assistant | Active |
-| 🏛️ Governança IA | Specialist | Active |
-| 🏴‍☠️ Pirate | Character Persona | Active |
+| Persona | Type | Responsible | Status |
+|----------|----------|----------|----------|
+| ✅ Aval | General Assistant | Moacyr Ribeiro Blondet | Active |
+| 🏛️ Governança IA | Specialist | Moacyr Ribeiro Blondet | Active |
+| 🏴‍☠️ Pirate | Character Persona | Moacyr Ribeiro Blondet | Active |
 
 ---
 
