@@ -1,0 +1,202 @@
+# Objetivo
+
+Criar o arquivo `ARTIFACT_META_MODEL.md`.
+
+Este documento constituirá o metamodelo oficial da Linguagem Operacional Tipada adotada pelo MIT AI Program Office.
+
+Seu objetivo é definir formalmente a estrutura dos artefatos institucionais utilizados pelo programa, servindo como referência única para colaboradores humanos e agentes de IA.
+
+---
+
+# Escopo
+
+Criar exclusivamente o arquivo `ARTIFACT_META_MODEL.md`.
+
+O documento deverá definir:
+
+- o modelo conceitual dos artefatos;
+- as entidades do metamodelo;
+- os atributos de cada entidade;
+- os tipos dos atributos;
+- a obrigatoriedade dos atributos;
+- os valores permitidos;
+- os valores default, quando aplicável;
+- os relacionamentos entre entidades;
+- as cardinalidades;
+- as regras estruturais;
+- as regras de baixo acoplamento.
+
+O documento deverá definir apenas **tipos**.
+
+Não deverão ser criadas instâncias de artefatos.
+
+---
+
+# Estrutura Esperada
+
+O documento deverá possuir obrigatoriamente a seguinte estrutura:
+
+# Objetivo
+
+# Escopo
+
+# Princípios Arquiteturais
+
+# Modelo Conceitual
+
+Apresentar um diagrama textual (ASCII) representando o modelo conceitual do metamodelo.
+
+Utilizar uma estrutura semelhante a:
+
+Artifact
+├── Strategic Artifact
+├── Active Artifact
+├── Context Artifact
+└── Passive Artifact
+
+Active Artifact
+├── provides → Capability
+└── requires → Capability
+
+Context Artifact
+└── allows → Capability
+
+Passive Artifact
+└── accepts → Capability
+
+Capability
+└── classifies execution semantics
+
+Class
+└── classifies artifact types
+
+O diagrama deverá representar claramente as entidades e seus relacionamentos conceituais.
+
+---
+
+# Entidades
+
+Definir, no mínimo, as seguintes entidades:
+
+- Artifact
+- Strategic Artifact
+- Active Artifact
+- Context Artifact
+- Passive Artifact
+- Capability
+- Class
+
+Para cada entidade utilizar obrigatoriamente o seguinte formato tabular:
+
+| Attribute | Type | Required | Allowed Values | Default | Description |
+
+Todos os atributos deverão possuir:
+
+- tipo;
+- obrigatoriedade;
+- valores permitidos;
+- valor default (quando aplicável);
+- descrição.
+
+---
+
+# Relacionamentos
+
+Apresentar uma tabela contendo todos os relacionamentos permitidos entre as entidades.
+
+Para cada relacionamento informar:
+
+- Entidade origem;
+- Entidade destino;
+- Tipo do relacionamento;
+- Cardinalidade;
+- Descrição.
+
+---
+
+# Cardinalidades
+
+Documentar todas as cardinalidades utilizadas pelo metamodelo.
+
+---
+
+# Regras Estruturais
+
+Definir formalmente todas as regras estruturais necessárias para garantir consistência do metamodelo.
+
+---
+
+# Regras de Baixo Acoplamento
+
+O documento deverá refletir explicitamente os seguintes princípios:
+
+- nenhum artefato pode depender estruturalmente de um artefato de camada superior;
+- compatibilidades deverão ocorrer por Classes e Capabilities, nunca por identificadores específicos;
+- artefatos deverão permanecer reutilizáveis;
+- o metamodelo define tipos, nunca instâncias;
+- o modelo deverá privilegiar reutilização, extensibilidade e evolução incremental.
+
+---
+
+# Exemplos
+
+Apresentar apenas exemplos ilustrativos.
+
+Não criar instâncias reais do programa, como por exemplo:
+
+- MLS-001
+- JOB-001
+- TPL-001
+- GOV.md
+
+ou quaisquer outros artefatos específicos do MIT AI Program Office.
+
+---
+
+# Evolução do Modelo
+
+Descrever como novas entidades, atributos ou relacionamentos poderão ser incorporados preservando compatibilidade com versões anteriores do metamodelo.
+
+---
+
+# Requisitos Obrigatórios
+
+- Utilizar linguagem técnica.
+- Escrever o documento como uma especificação técnica.
+- Priorizar tabelas, regras formais e estruturas determinísticas.
+- Adotar uma abordagem semelhante a um Dicionário de Dados (Data Dictionary).
+- Garantir consistência terminológica em todo o documento.
+
+---
+
+# Restrições
+
+- Não alterar outros arquivos do repositório.
+- Não reorganizar diretórios.
+- Não criar novos arquivos além de `ARTIFACT_META_MODEL.md`.
+- Não realizar commit.
+- Não criar Pull Request.
+
+---
+
+# Critérios de Aceitação
+
+A entrega será considerada aceita quando:
+
+- toda a estrutura solicitada estiver presente;
+- todas as entidades estiverem definidas;
+- todas as entidades utilizarem o formato tabular especificado;
+- os relacionamentos estiverem documentados;
+- as cardinalidades estiverem definidas;
+- as regras estruturais estiverem completas;
+- as regras de baixo acoplamento estiverem explícitas;
+- não existirem instâncias concretas de artefatos;
+- o documento puder ser utilizado como referência oficial para a criação dos demais artefatos do framework.
+
+---
+
+# Resultado Esperado
+
+Apresentar exclusivamente o conteúdo proposto para o arquivo `ARTIFACT_META_MODEL.md`, pronto para revisão humana.
+
+Não executar alterações adicionais no repositório.
