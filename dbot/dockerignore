@@ -1,0 +1,12 @@
+.env
+.venv
+.venv-1
+__pycache__
+*.py[cod]
+.git
+.gitignore
+README.md
+LICENSE
+requirements_inicial.txt
+discord_only.py
+mybot.py
