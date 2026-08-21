@@ -201,6 +201,10 @@ cython_debug/
 .cursorignore
 .cursorindexingignore
 
+# Arquivos locais de testes e análise de bugs
+BugFix_*
+Teste_*
+
 # Marimo
 marimo/_static/
 marimo/_lsp/
