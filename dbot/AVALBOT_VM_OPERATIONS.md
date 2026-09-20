@@ -63,6 +63,24 @@ Configuration identifiers such as the Azure Tenant ID, Subscription ID, and Clie
 
 ---
 
+## Azure Command Execution Model
+
+Version 1 uses **Azure Action Run Command** as the VM command execution mechanism.
+
+Action Run Command was selected because the initial operational channel is intended for small, one-time diagnostic scripts and controlled READ-ONLY inspection of the running environment.
+
+**Managed Run Command is deliberately not used in Version 1.** It is more appropriate when recurrent execution, multiple scripts, deployment-time execution, sequencing, long-running commands, or reusable published commands are required.
+
+Action Run Command executes the diagnostic script through the Azure VM Agent. No permanent operational script is initially installed on the VM.
+
+Action Run Command has an important output limitation: only the last **4,096 bytes** of command output are returned.
+
+This limitation directly affects the `runtime-source` operation. The implementation MUST NOT assume that printing the runtime Python file through standard output guarantees retrieval of the complete source. A mechanism that preserves and verifies the complete runtime source must be defined before `runtime-source` can report a source file as complete.
+
+The use of Action Run Command does not itself make an operation READ-ONLY. READ-ONLY behavior is enforced by the closed set of diagnostic operations defined by this contract and implemented by the workflow.
+
+---
+
 ## Operational Principle
 
 The workflow follows a **closed-command model**.
