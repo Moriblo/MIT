@@ -1,0 +1,233 @@
+# AvalBot VM — Governed Runtime Source Verification
+#
+# V1 scope: runtime-source only.
+# Human authorization MUST NOT be inferred.
+# This workflow reads the running container's command and runtime Python source.
+# It MUST NOT inspect container environment variables or .env files.
+
+name: AvalBot VM Operations
+
+on:
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: Governed AvalBot VM operation
+        required: true
+        type: choice
+        options:
+          - runtime-source
+
+permissions:
+  id-token: write
+  contents: none
+
+env:
+  AZURE_CORE_OUTPUT: none
+
+jobs:
+  runtime-source:
+    if: inputs.operation == 'runtime-source'
+    name: Verify AvalBot runtime source and Groq model
+    runs-on: ubuntu-latest
+    environment: avalbot-vm-ops
+    timeout-minutes: 15
+
+    steps:
+      - name: Authenticate to Azure using GitHub OIDC
+        uses: azure/login@532459ea530d8321f2fb9bb10d1e0bcf23869a43 # Azure/login v3.0.0
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Validate authenticated Azure context
+        shell: bash
+        env:
+          EXPECTED_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          EXPECTED_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+        run: |
+          set -euo pipefail
+          ACTUAL_SUBSCRIPTION_ID="$(az account show --query id --output tsv)"
+          ACTUAL_TENANT_ID="$(az account show --query tenantId --output tsv)"
+          [[ "$ACTUAL_SUBSCRIPTION_ID" == "$EXPECTED_SUBSCRIPTION_ID" ]] || { echo "::error::Unexpected Azure subscription."; exit 1; }
+          [[ "$ACTUAL_TENANT_ID" == "$EXPECTED_TENANT_ID" ]] || { echo "::error::Unexpected Azure tenant."; exit 1; }
+          echo "Azure authentication context validated."
+
+      - name: Discover running AvalBot runtime source
+        id: discover
+        shell: bash
+        env:
+          AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+          AZURE_VM_NAME: ${{ vars.AZURE_VM_NAME }}
+        run: |
+          set -euo pipefail
+
+          # Closed VM-side script. No workflow input is interpolated into it.
+          # docker inspect is deliberately restricted to State.Running and
+          # Config.Cmd; Config.Env is never requested.
+          read -r -d '' VM_SCRIPT <<'VM_SCRIPT' || true
+          set -eu
+          CONTAINER='avalbot'
+
+          RUNNING="$(docker inspect --format '{{.State.Running}}' "$CONTAINER" 2>/dev/null || true)"
+          [ "$RUNNING" = "true" ] || { echo 'ERROR: avalbot container is not running' >&2; exit 20; }
+
+          CMD_JSON="$(docker inspect --format '{{json .Config.Cmd}}' "$CONTAINER")"
+          RUNTIME_FILE="$(printf '%s' "$CMD_JSON" | sed -n 's/.*"\([^"]*\.py\)".*/\1/p')"
+          [ -n "$RUNTIME_FILE" ] || { echo 'ERROR: no Python runtime file found in container Config.Cmd' >&2; exit 21; }
+
+          case "$RUNTIME_FILE" in
+            /*) CONTAINER_FILE="$RUNTIME_FILE" ;;
+            *) CONTAINER_FILE="/app/$RUNTIME_FILE" ;;
+          esac
+
+          docker exec "$CONTAINER" test -f "$CONTAINER_FILE" || { echo 'ERROR: runtime Python file does not exist in container' >&2; exit 22; }
+
+          BYTES="$(docker exec "$CONTAINER" wc -c < "$CONTAINER_FILE" | tr -d ' ')"
+          SHA256="$(docker exec "$CONTAINER" sha256sum "$CONTAINER_FILE" | awk '{print $1}')"
+
+          printf 'AVALBOT_RUNTIME_BEGIN\n'
+          printf 'CONTAINER=%s\n' "$CONTAINER"
+          printf 'RUNNING=%s\n' "$RUNNING"
+          printf 'CMD_JSON=%s\n' "$CMD_JSON"
+          printf 'RUNTIME_FILE=%s\n' "$CONTAINER_FILE"
+          printf 'BYTES=%s\n' "$BYTES"
+          printf 'SHA256=%s\n' "$SHA256"
+          printf 'AVALBOT_RUNTIME_END\n'
+          VM_SCRIPT
+
+          OUT="$(mktemp)"
+          ERR="$(mktemp)"
+          trap 'rm -f "$OUT" "$ERR"' EXIT
+
+          set +e
+          az vm run-command invoke             --resource-group "$AZURE_RESOURCE_GROUP"             --name "$AZURE_VM_NAME"             --command-id RunShellScript             --scripts "$VM_SCRIPT"             --query 'value[].message'             --output tsv             --only-show-errors >"$OUT" 2>"$ERR"
+          RC=$?
+          set -e
+
+          if [[ "$RC" -ne 0 ]]; then
+            echo "::error::Runtime discovery failed."
+            [[ ! -s "$ERR" ]] || cat "$ERR"
+            exit "$RC"
+          fi
+
+          BLOCK="$(sed -n '/AVALBOT_RUNTIME_BEGIN/,/AVALBOT_RUNTIME_END/p' "$OUT")"
+          grep -Fq 'AVALBOT_RUNTIME_END' <<<"$BLOCK" || { echo "::error::Incomplete runtime metadata response."; exit 1; }
+
+          CONTAINER="$(sed -n 's/^CONTAINER=//p' <<<"$BLOCK")"
+          RUNNING="$(sed -n 's/^RUNNING=//p' <<<"$BLOCK")"
+          CMD_JSON="$(sed -n 's/^CMD_JSON=//p' <<<"$BLOCK")"
+          RUNTIME_FILE="$(sed -n 's/^RUNTIME_FILE=//p' <<<"$BLOCK")"
+          BYTES="$(sed -n 's/^BYTES=//p' <<<"$BLOCK")"
+          SHA256="$(sed -n 's/^SHA256=//p' <<<"$BLOCK")"
+
+          [[ "$RUNNING" == "true" ]] || { echo "::error::Container not running."; exit 1; }
+          [[ "$BYTES" =~ ^[0-9]+$ ]] || { echo "::error::Invalid source byte count."; exit 1; }
+          [[ "$SHA256" =~ ^[0-9a-f]{64}$ ]] || { echo "::error::Invalid source SHA-256."; exit 1; }
+
+          {
+            echo "container=$CONTAINER"
+            echo "cmd_json=$CMD_JSON"
+            echo "runtime_file=$RUNTIME_FILE"
+            echo "bytes=$BYTES"
+            echo "sha256=$SHA256"
+          } >> "$GITHUB_OUTPUT"
+
+          echo "Running AvalBot container and runtime Python file identified."
+
+      - name: Retrieve complete runtime source with SHA-256 verification
+        id: source
+        shell: bash
+        env:
+          AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+          AZURE_VM_NAME: ${{ vars.AZURE_VM_NAME }}
+          RUNTIME_FILE: ${{ steps.discover.outputs.runtime_file }}
+          EXPECTED_BYTES: ${{ steps.discover.outputs.bytes }}
+          EXPECTED_SHA256: ${{ steps.discover.outputs.sha256 }}
+        run: |
+          set -euo pipefail
+
+          # Keep each Action Run Command response comfortably below Azure's
+          # output ceiling. Base64 is used only as a transport encoding.
+          CHUNK_BYTES=1800
+          SOURCE_B64="$(mktemp)"
+          SOURCE_FILE="$(mktemp)"
+          trap 'rm -f "$SOURCE_B64" "$SOURCE_FILE"' EXIT
+          : > "$SOURCE_B64"
+
+          OFFSET=0
+          while (( OFFSET < EXPECTED_BYTES )); do
+            COUNT=$CHUNK_BYTES
+            if (( OFFSET + COUNT > EXPECTED_BYTES )); then
+              COUNT=$((EXPECTED_BYTES - OFFSET))
+            fi
+
+            # OFFSET/COUNT are runner-calculated integers; RUNTIME_FILE was
+            # discovered from the fixed container's Config.Cmd, not user input.
+            VM_SCRIPT="docker exec avalbot dd if='$RUNTIME_FILE' bs=1 skip=$OFFSET count=$COUNT status=none | base64 -w0; printf '\nAVALBOT_CHUNK_END\n'"
+
+            OUT="$(mktemp)"
+            ERR="$(mktemp)"
+            set +e
+            az vm run-command invoke               --resource-group "$AZURE_RESOURCE_GROUP"               --name "$AZURE_VM_NAME"               --command-id RunShellScript               --scripts "$VM_SCRIPT"               --query 'value[].message'               --output tsv               --only-show-errors >"$OUT" 2>"$ERR"
+            RC=$?
+            set -e
+
+            if [[ "$RC" -ne 0 ]]; then
+              echo "::error::Source chunk retrieval failed at byte offset $OFFSET."
+              [[ ! -s "$ERR" ]] || cat "$ERR"
+              rm -f "$OUT" "$ERR"
+              exit "$RC"
+            fi
+
+            grep -Fq 'AVALBOT_CHUNK_END' "$OUT" || { echo "::error::Incomplete source chunk response."; rm -f "$OUT" "$ERR"; exit 1; }
+            sed -n '/AVALBOT_CHUNK_END/q;p' "$OUT" | tr -d '\r\n' >> "$SOURCE_B64"
+            rm -f "$OUT" "$ERR"
+            OFFSET=$((OFFSET + COUNT))
+          done
+
+          base64 --decode "$SOURCE_B64" > "$SOURCE_FILE"
+          ACTUAL_BYTES="$(wc -c < "$SOURCE_FILE" | tr -d ' ')"
+          ACTUAL_SHA256="$(sha256sum "$SOURCE_FILE" | awk '{print $1}')"
+
+          [[ "$ACTUAL_BYTES" == "$EXPECTED_BYTES" ]] || { echo "::error::Reconstructed source byte count mismatch."; exit 1; }
+          [[ "$ACTUAL_SHA256" == "$EXPECTED_SHA256" ]] || { echo "::error::Reconstructed source SHA-256 mismatch."; exit 1; }
+
+          # Extract only literal GROQ_MODEL assignments from the verified source.
+          # Do not print the complete source into Actions logs.
+          MODEL_LINE="$(grep -E '^[[:space:]]*GROQ_MODEL[[:space:]]*=' "$SOURCE_FILE" | tail -n 1 || true)"
+          [[ -n "$MODEL_LINE" ]] || { echo "::error::No GROQ_MODEL assignment found in verified runtime source."; exit 1; }
+
+          MODEL="$(printf '%s\n' "$MODEL_LINE" | sed -E 's/^[[:space:]]*GROQ_MODEL[[:space:]]*=[[:space:]]*["'"'"']([^"'"'"']+)["'"'"'][[:space:]]*(#.*)?$/\1/')"
+          [[ "$MODEL" != "$MODEL_LINE" && -n "$MODEL" ]] || { echo "::error::GROQ_MODEL assignment is not a supported literal string."; exit 1; }
+
+          echo "groq_model=$MODEL" >> "$GITHUB_OUTPUT"
+          echo "Verified runtime source reconstructed successfully."
+          echo "Effective configured GROQ model: $MODEL"
+
+      - name: Record runtime verification result
+        shell: bash
+        env:
+          CONTAINER: ${{ steps.discover.outputs.container }}
+          CMD_JSON: ${{ steps.discover.outputs.cmd_json }}
+          RUNTIME_FILE: ${{ steps.discover.outputs.runtime_file }}
+          BYTES: ${{ steps.discover.outputs.bytes }}
+          SHA256: ${{ steps.discover.outputs.sha256 }}
+          GROQ_MODEL: ${{ steps.source.outputs.groq_model }}
+        run: |
+          {
+            echo "## AvalBot Runtime Source Verification"
+            echo
+            echo "**Result:** PASSED"
+            echo
+            echo "- Container: `$CONTAINER`"
+            echo "- Running: `true`"
+            echo "- Runtime command: `$CMD_JSON`"
+            echo "- Runtime source: `$RUNTIME_FILE`"
+            echo "- Source bytes: `$BYTES`"
+            echo "- Source SHA-256: `$SHA256`"
+            echo "- Complete source reconstructed and SHA-256 verified: **YES**"
+            echo "- Effective configured GROQ model: `$GROQ_MODEL`"
+            echo
+            echo "> No container environment variables or .env files were read."
+          } >> "$GITHUB_STEP_SUMMARY"
