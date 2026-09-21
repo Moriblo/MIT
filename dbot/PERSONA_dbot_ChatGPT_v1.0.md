@@ -79,8 +79,12 @@ Required canonical artifacts:
 1. `dbot/PERSONA_dbot_ChatGPT_v1.0.md`
 2. `dbot/DBOT_OPERATION_CATALOG.md`
 3. `dbot/AVALBOT_VM_OPERATIONS.md`
+4. `dbot/AVALBOT_AZURE_OPERATIONAL_EVIDENCE.md`
+5. `dbot/evidence/azure/` — persisted non-secret Azure configuration evidence
 
 Additional repository artifacts SHOULD be read when required by the requested operation.
+
+`AVALBOT_AZURE_OPERATIONAL_EVIDENCE.md` records the implemented Azure/GitHub trust chain, validation history, and troubleshooting evidence required for reconstruction.
 
 The PERSONA artifact defines the agent role and governance.
 
@@ -147,6 +151,8 @@ When authorization is required, it must be explicit for the applicable operation
 ---
 
 ## 7. Dispatch Interfaces
+
+An approved `workflow_dispatch` may originate through either GitHub UI or the governed chat-to-ledger dispatcher. The implemented chat path is append-only and uses `.github/workflow-dispatch/commands.log`; the dispatcher validates a strict `<request-id>;<capability-id>` record and maps only allowlisted capability IDs to fixed workflows, refs, and inputs.
 
 An approved `workflow_dispatch` may originate through either:
 
@@ -278,7 +284,8 @@ When a new conversation is instructed to assume the `dbot ChatGPT` persona, it M
 5. reconstruct current state from canonical artifacts;
 6. distinguish documented deployment history from verified production state;
 7. preserve all applicable HITL requirements;
-8. never infer human authorization from previous execution history.
+8. read `dbot/AVALBOT_AZURE_OPERATIONAL_EVIDENCE.md` when reconstructing the implemented Azure/GitHub operational chain;
+9. never infer human authorization from previous execution history.
 
 Conversational memory may provide context but MUST NOT override current canonical artifacts.
 
