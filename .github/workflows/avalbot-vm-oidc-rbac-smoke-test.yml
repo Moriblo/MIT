@@ -1,0 +1,394 @@
+# ==============================================================================
+# AvalBot VM — Azure OIDC/RBAC Smoke Test
+# ==============================================================================
+#
+# PURPOSE
+# -------
+# Validate the authentication and authorization path used by governed GitHub
+# Actions workflows to reach the Azure VM that hosts AvalBot:
+#
+#   Human
+#     -> GitHub workflow_dispatch
+#     -> GitHub Environment: avalbot-vm-ops
+#     -> GitHub OIDC token
+#     -> Microsoft Entra Federated Identity Credential
+#     -> Service Principal: github-avalbot-vm-ops
+#     -> Azure RBAC
+#     -> Azure VM Action Run Command
+#     -> vm-avalbot
+#
+# This workflow is NOT the AvalBot operational workflow.
+#
+# Its only purpose is to validate the identity and authorization chain before
+# the operational workflow (.github/workflows/avalbot-vm-ops.yml) is
+# materialized and used.
+#
+# ==============================================================================
+# GOVERNANCE AND HUMAN AUTHORIZATION
+# ==============================================================================
+#
+# Human authorization MUST NOT be inferred.
+#
+# Creating, reviewing, discussing, committing, or referencing this workflow
+# does NOT authorize its execution.
+#
+# Execution requires an explicit workflow_dispatch event initiated by a human.
+#
+# The GitHub Environment "avalbot-vm-ops" is part of the OIDC trust boundary.
+# The Microsoft Entra Federated Identity Credential was created specifically
+# for that GitHub Environment.
+#
+# ==============================================================================
+# SECURITY BOUNDARY
+# ==============================================================================
+#
+# This is a CLOSED-COMMAND smoke test.
+#
+# The workflow intentionally exposes NO user-controlled command, script,
+# filename, path, Docker argument, Azure CLI argument, or VM payload.
+#
+# The ONLY shell payload intentionally sent to vm-avalbot is:
+#
+#   printf 'AVALBOT_OIDC_RBAC_OK\n'
+#
+# DO NOT replace this static payload with workflow input.
+#
+# Doing so would change this workflow from a closed authorization test into an
+# arbitrary remote-command execution interface and would require a new
+# governance and security decision.
+#
+# ==============================================================================
+# OUT OF SCOPE
+# ==============================================================================
+#
+# This workflow does NOT intentionally:
+#
+#   - inspect Docker containers;
+#   - inspect Docker environment variables;
+#   - read .env files;
+#   - read application files;
+#   - retrieve AvalBot source code;
+#   - read AvalBot application logs;
+#   - restart containers or services;
+#   - install or remove packages;
+#   - modify AvalBot configuration;
+#   - modify application data;
+#   - change Azure RBAC;
+#   - change the Federated Identity Credential;
+#   - change the Entra App Registration;
+#   - modify repository contents.
+#
+# ==============================================================================
+# IMPORTANT AZURE RUN COMMAND PROPERTY
+# ==============================================================================
+#
+# Azure VM Action Run Command is technically capable of executing mutating
+# shell commands on a VM.
+#
+# Therefore, "non-application-mutating" behavior is a property of THIS CLOSED
+# WORKFLOW CONTRACT. It is NOT an intrinsic property of Azure Run Command or
+# of the Azure RBAC permission that authorizes it.
+#
+# ==============================================================================
+# EXPECTED RESULT
+# ==============================================================================
+#
+# A successful authorization path MUST cause the VM command response to contain:
+#
+#   AVALBOT_OIDC_RBAC_OK
+#
+# A successful Azure CLI process alone is NOT considered sufficient evidence.
+# The returned marker is independently checked.
+#
+# Any failure MUST be investigated before changing Azure RBAC, OIDC/FIC,
+# Entra configuration, GitHub Environment configuration, or this workflow.
+#
+# Permissions MUST NOT be automatically expanded in response to a failure.
+#
+# ==============================================================================
+# CREDENTIAL AND SECRET MODEL
+# ==============================================================================
+#
+# Authentication uses GitHub OIDC.
+#
+# No Azure client secret, password, certificate, service-principal password,
+# SSH private key, or other long-lived Azure credential is required.
+#
+# Identity-related Azure values are expected as GitHub Environment secrets:
+#
+#   AZURE_CLIENT_ID
+#   AZURE_TENANT_ID
+#   AZURE_SUBSCRIPTION_ID
+#
+# Target configuration is expected as GitHub Environment variables:
+#
+#   AZURE_RESOURCE_GROUP
+#   AZURE_VM_NAME
+#
+# These values MUST belong to the GitHub Environment:
+#
+#   avalbot-vm-ops
+#
+# ==============================================================================
+# SUPPLY-CHAIN CONTROL
+# ==============================================================================
+#
+# Third-party GitHub Actions MUST be pinned to an approved full commit SHA.
+#
+# azure/login is therefore intentionally NOT referenced using a floating tag
+# such as @v3.
+#
+# The SHA below corresponds to the approved Azure/login v3 release selected
+# for this workflow.
+#
+# ==============================================================================
+
+name: AvalBot VM OIDC/RBAC Smoke Test
+
+# ==============================================================================
+# TRIGGER
+# ==============================================================================
+#
+# workflow_dispatch is deliberately the ONLY trigger.
+#
+# There is no automatic execution on:
+#
+#   - push
+#   - pull_request
+#   - schedule
+#   - repository_dispatch
+#
+# This trigger represents the explicit human execution boundary for this
+# V1 smoke test.
+#
+on:
+  workflow_dispatch:
+
+# ==============================================================================
+# GITHUB TOKEN PERMISSIONS
+# ==============================================================================
+#
+# id-token: write
+#   Required for GitHub to issue the OIDC token consumed by azure/login.
+#
+# contents: none
+#   The workflow does not check out, read, or modify repository contents.
+#
+# No additional GITHUB_TOKEN permissions are granted.
+#
+permissions:
+  id-token: write
+  contents: none
+
+# ==============================================================================
+# SAFE GLOBAL DEFAULTS
+# ==============================================================================
+#
+# Azure CLI output is suppressed by default.
+#
+# GitHub stores workflow stdout/stderr in workflow logs. Suppressing Azure CLI
+# output by default reduces the risk of accidentally persisting unnecessary
+# Azure information in those logs.
+#
+# Individual commands that require output MUST explicitly request it.
+#
+env:
+  AZURE_CORE_OUTPUT: none
+
+jobs:
+  # ============================================================================
+  # OIDC / RBAC SMOKE TEST
+  # ============================================================================
+  oidc-rbac-smoke-test:
+    name: Validate Azure OIDC and VM Run Command authorization
+
+    # Use a GitHub-hosted runner.
+    #
+    # No self-hosted runner and no direct SSH connection to vm-avalbot are used.
+    runs-on: ubuntu-latest
+
+    # --------------------------------------------------------------------------
+    # OIDC TRUST BOUNDARY
+    # --------------------------------------------------------------------------
+    #
+    # This Environment name is security-significant.
+    #
+    # It participates in the OIDC subject expected by the Microsoft Entra
+    # Federated Identity Credential.
+    #
+    # Changing this value can break federated authentication and MUST therefore
+    # be treated as a governed configuration change.
+    #
+    environment: avalbot-vm-ops
+
+    # Prevent a stalled Azure operation from consuming a runner indefinitely.
+    timeout-minutes: 10
+
+    steps:
+      # =========================================================================
+      # STEP 1 — AUTHENTICATE TO AZURE
+      # =========================================================================
+      #
+      # Authenticate using the GitHub-issued OIDC token.
+      #
+      # No Azure client secret is used.
+      #
+      # azure/login is pinned to a full commit SHA rather than a movable tag.
+      #
+      - name: Authenticate to Azure using GitHub OIDC
+        uses: azure/login@532459ea530d8321f2fb9bb10d1e0bcf23869a43 # Azure/login v3.0.0
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      # =========================================================================
+      # STEP 2 — VALIDATE AUTHENTICATED AZURE CONTEXT
+      # =========================================================================
+      #
+      # Do not assume that successful authentication means that the expected
+      # subscription and tenant were selected.
+      #
+      # Retrieve ONLY the values needed for validation and compare them against
+      # the controlled Environment configuration.
+      #
+      # The values are not deliberately printed to the workflow log.
+      #
+      - name: Validate authenticated Azure context
+        shell: bash
+        env:
+          EXPECTED_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          EXPECTED_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+        run: |
+          set -euo pipefail
+
+          ACTUAL_SUBSCRIPTION_ID="$(
+            az account show \
+              --query 'id' \
+              --output tsv
+          )"
+
+          ACTUAL_TENANT_ID="$(
+            az account show \
+              --query 'tenantId' \
+              --output tsv
+          )"
+
+          if [[ "$ACTUAL_SUBSCRIPTION_ID" != "$EXPECTED_SUBSCRIPTION_ID" ]]; then
+            echo "::error::Authenticated Azure subscription does not match the governed configuration."
+            exit 1
+          fi
+
+          if [[ "$ACTUAL_TENANT_ID" != "$EXPECTED_TENANT_ID" ]]; then
+            echo "::error::Authenticated Azure tenant does not match the governed configuration."
+            exit 1
+          fi
+
+          echo "Azure authentication context validated."
+
+      # =========================================================================
+      # STEP 3 — TEST ACTION RUN COMMAND AUTHORIZATION
+      # =========================================================================
+      #
+      # This is the only step that invokes a command inside vm-avalbot.
+      #
+      # The VM-side payload is STATIC:
+      #
+      #   printf 'AVALBOT_OIDC_RBAC_OK\n'
+      #
+      # SECURITY REQUIREMENT:
+      #
+      # DO NOT replace the static payload with:
+      #
+      #   ${{ github.event.inputs.* }}
+      #   ${{ inputs.* }}
+      #   arbitrary environment variables
+      #   repository-controlled shell fragments
+      #   dynamically constructed commands
+      #
+      # Such a change would invalidate the closed-command security model.
+      #
+      - name: Validate Azure VM Action Run Command authorization
+        shell: bash
+        env:
+          AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+          AZURE_VM_NAME: ${{ vars.AZURE_VM_NAME }}
+        run: |
+          set -euo pipefail
+
+          echo "Testing governed Azure VM Action Run Command authorization..."
+
+          STDOUT_FILE="$(mktemp)"
+          STDERR_FILE="$(mktemp)"
+
+          cleanup() {
+            rm -f "$STDOUT_FILE" "$STDERR_FILE"
+          }
+
+          trap cleanup EXIT
+
+          set +e
+
+          az vm run-command invoke \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --name "$AZURE_VM_NAME" \
+            --command-id RunShellScript \
+            --scripts "printf 'AVALBOT_OIDC_RBAC_OK\n'" \
+            --query 'value[].message' \
+            --output tsv \
+            --only-show-errors \
+            >"$STDOUT_FILE" \
+            2>"$STDERR_FILE"
+
+          AZURE_EXIT_CODE=$?
+
+          set -e
+
+          if [[ "$AZURE_EXIT_CODE" -ne 0 ]]; then
+            echo "::error::Azure VM Run Command invocation failed."
+
+            if [[ -s "$STDERR_FILE" ]]; then
+              echo "::group::Azure CLI diagnostic"
+              cat "$STDERR_FILE"
+              echo "::endgroup::"
+            fi
+
+            exit "$AZURE_EXIT_CODE"
+          fi
+
+          if ! grep -Fq "AVALBOT_OIDC_RBAC_OK" "$STDOUT_FILE"; then
+            echo "::error::Azure Run Command completed without the expected validation marker."
+            exit 1
+          fi
+
+          echo "AVALBOT_OIDC_RBAC_OK"
+          echo "OIDC authentication and VM Run Command authorization validated."
+
+      # =========================================================================
+      # STEP 4 — RECORD SUCCESSFUL COMPLETION
+      # =========================================================================
+      #
+      # Produce a concise GitHub Actions Job Summary.
+      #
+      # The summary records WHAT was validated without exposing identifiers,
+      # credentials, Azure tokens, VM data, application data, or source code.
+      #
+      - name: Record smoke-test result
+        shell: bash
+        run: |
+          {
+            echo "## AvalBot VM OIDC/RBAC Smoke Test"
+            echo
+            echo "**Result:** PASSED"
+            echo
+            echo "Validated:"
+            echo
+            echo "- GitHub OIDC token issuance"
+            echo "- Microsoft Entra federated authentication"
+            echo "- Governed Azure tenant and subscription context"
+            echo "- Azure RBAC authorization for the governed VM target"
+            echo "- Azure VM Action Run Command invocation"
+            echo "- Expected static VM response marker"
+            echo
+            echo "> No AvalBot application operation was intentionally performed."
+          } >> "$GITHUB_STEP_SUMMARY"
