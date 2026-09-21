@@ -1,0 +1,124 @@
+name: dbot Workflow Dispatcher
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflow-dispatch/commands.log"
+
+permissions:
+  contents: read
+  actions: write
+
+concurrency:
+  group: dbot-workflow-dispatcher
+  cancel-in-progress: false
+
+jobs:
+  dispatch:
+    name: Validate ledger request and dispatch registered capability
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Check out repository history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Validate append-only ledger and resolve capability
+        id: request
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          LEDGER=".github/workflow-dispatch/commands.log"
+
+          # The infrastructure-creation commit has no parent version of the
+          # ledger and contains no executable request. Exit without dispatch.
+          if ! git cat-file -e HEAD^:"$LEDGER" 2>/dev/null; then
+            echo "Ledger initialized; no dispatch request to process."
+            echo "dispatch=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          git show HEAD^:"$LEDGER" > /tmp/ledger.before
+          cp "$LEDGER" /tmp/ledger.after
+
+          before_lines="$(wc -l < /tmp/ledger.before)"
+          after_lines="$(wc -l < /tmp/ledger.after)"
+
+          if [ "$after_lines" -ne $((before_lines + 1)) ]; then
+            echo "::error::Ledger change must append exactly one line."
+            exit 1
+          fi
+
+          if ! cmp -s /tmp/ledger.before <(head -n "$before_lines" /tmp/ledger.after); then
+            echo "::error::Existing ledger history was modified."
+            exit 1
+          fi
+
+          request="$(tail -n 1 /tmp/ledger.after)"
+
+          if [[ ! "$request" =~ ^(REQ-[0-9]{6});([a-z0-9][a-z0-9-]*)$ ]]; then
+            echo "::error::Invalid request format. Expected REQ-NNNNNN;capability-id."
+            exit 1
+          fi
+
+          request_id="${BASH_REMATCH[1]}"
+          capability_id="${BASH_REMATCH[2]}"
+
+          if grep -Eq "^${request_id};" /tmp/ledger.before; then
+            echo "::error::Request ID has already been used."
+            exit 1
+          fi
+
+          # Closed V1 allowlist. The ledger names a capability, never a
+          # workflow path, ref, shell command, URL, or arbitrary input.
+          case "$capability_id" in
+            avalbot-oidc-rbac-smoke-test)
+              workflow="avalbot-vm-oidc-rbac-smoke-test.yml"
+              ref="main"
+              ;;
+            *)
+              echo "::error::Capability is not registered in the V1 allowlist."
+              exit 1
+              ;;
+          esac
+
+          echo "dispatch=true" >> "$GITHUB_OUTPUT"
+          echo "request_id=$request_id" >> "$GITHUB_OUTPUT"
+          echo "capability_id=$capability_id" >> "$GITHUB_OUTPUT"
+          echo "workflow=$workflow" >> "$GITHUB_OUTPUT"
+          echo "ref=$ref" >> "$GITHUB_OUTPUT"
+
+      - name: Dispatch registered workflow
+        if: steps.request.outputs.dispatch == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TARGET_WORKFLOW: ${{ steps.request.outputs.workflow }}
+          TARGET_REF: ${{ steps.request.outputs.ref }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh workflow run "$TARGET_WORKFLOW" --ref "$TARGET_REF"
+
+      - name: Record dispatcher result
+        if: steps.request.outputs.dispatch == 'true'
+        env:
+          REQUEST_ID: ${{ steps.request.outputs.request_id }}
+          CAPABILITY_ID: ${{ steps.request.outputs.capability_id }}
+          TARGET_WORKFLOW: ${{ steps.request.outputs.workflow }}
+          TARGET_REF: ${{ steps.request.outputs.ref }}
+        shell: bash
+        run: |
+          {
+            echo "## dbot Workflow Dispatcher"
+            echo
+            echo "- Request: `$REQUEST_ID`"
+            echo "- Capability: `$CAPABILITY_ID`"
+            echo "- Workflow: `$TARGET_WORKFLOW`"
+            echo "- Ref: `$TARGET_REF`"
+            echo "- Dispatch request: submitted"
+          } >> "$GITHUB_STEP_SUMMARY"
