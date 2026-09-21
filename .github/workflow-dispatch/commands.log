@@ -1,0 +1,3 @@
+# dbot workflow-dispatch ledger
+# Append-only. Format: <request-id>;<capability-id>
+# No execution request is recorded by this infrastructure-creation commit.
