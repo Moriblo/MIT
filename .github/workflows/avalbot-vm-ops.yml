@@ -108,8 +108,13 @@
 # Base64 is used only as a transport encoding. It is NOT encryption and is NOT
 # treated as a security control.
 #
-# Each chunk carries an explicit completion marker. The complete reconstructed
-# source is then validated against the VM-side byte count and SHA-256.
+# Each chunk is wrapped in an explicit BEGIN/END envelope. The runner requires
+# exactly one BEGIN and one END marker, extracts only the payload between them,
+# and validates that payload as Base64 before accepting it. Azure framing outside
+# the envelope is therefore never appended to the reconstructed source.
+#
+# The complete reconstructed source is then validated against the VM-side byte
+# count and SHA-256.
 #
 # ==============================================================================
 # LOGGING / DATA MINIMIZATION
@@ -427,9 +432,15 @@ jobs:
             # Config.Cmd. None of these values originates in workflow_dispatch.
             #
             # dd reads bytes only. No file is created or modified in the VM.
-            # A completion marker is appended outside the source stream so the
-            # runner can reject an incomplete response.
-            VM_SCRIPT="docker exec avalbot dd if='$RUNTIME_FILE' bs=1 skip=$OFFSET count=$COUNT status=none | base64 -w0; printf '\nAVALBOT_CHUNK_END\n'"
+            #
+            # The Base64 payload is wrapped in explicit BEGIN/END markers.
+            # Azure Run Command may add framing text around command output; the
+            # runner must never treat that framing as source data.
+            #
+            # Exactly one marker pair is required per response. The runner
+            # extracts only the enclosed payload and validates its Base64 syntax
+            # before appending it to the reconstruction buffer.
+            VM_SCRIPT="printf 'AVALBOT_CHUNK_BEGIN\\n'; docker exec avalbot dd if='$RUNTIME_FILE' bs=1 skip=$OFFSET count=$COUNT status=none | base64 -w0; printf '\\nAVALBOT_CHUNK_END\\n'"
 
             OUT="$(mktemp)"
             ERR="$(mktemp)"
@@ -445,14 +456,39 @@ jobs:
               exit "$RC"
             fi
 
-            grep -Fq 'AVALBOT_CHUNK_END' "$OUT" || { echo "::error::Incomplete source chunk response."; rm -f "$OUT" "$ERR"; exit 1; }
-            sed -n '/AVALBOT_CHUNK_END/q;p' "$OUT" | tr -d '\r\n' >> "$SOURCE_B64"
+            BEGIN_COUNT="$(grep -Fc 'AVALBOT_CHUNK_BEGIN' "$OUT" || true)"
+            END_COUNT="$(grep -Fc 'AVALBOT_CHUNK_END' "$OUT" || true)"
+            [[ "$BEGIN_COUNT" == "1" && "$END_COUNT" == "1" ]] || {
+              echo "::error::Ambiguous or incomplete source chunk envelope at byte offset $OFFSET."
+              rm -f "$OUT" "$ERR"
+              exit 1
+            }
+
+            CHUNK="$(sed -n '/AVALBOT_CHUNK_BEGIN/,/AVALBOT_CHUNK_END/p' "$OUT" | sed '1d;$d' | tr -d '\r\n')"
+            [[ -n "$CHUNK" ]] || {
+              echo "::error::Empty source chunk payload at byte offset $OFFSET."
+              rm -f "$OUT" "$ERR"
+              exit 1
+            }
+
+            if ! printf '%s' "$CHUNK" | base64 --decode >/dev/null 2>&1; then
+              echo "::error::Invalid Base64 source chunk payload at byte offset $OFFSET."
+              rm -f "$OUT" "$ERR"
+              exit 1
+            fi
+
+            printf '%s' "$CHUNK" >> "$SOURCE_B64"
             rm -f "$OUT" "$ERR"
             OFFSET=$((OFFSET + COUNT))
           done
 
-          # Reconstruct locally, then independently recalculate integrity data.
-          # A successful Azure CLI exit code is NOT sufficient evidence.
+          # At this point SOURCE_B64 contains only individually validated payloads
+          # extracted from explicit chunk envelopes. Reconstruct locally, then
+          # independently recalculate integrity data.
+          #
+          # A successful Azure CLI exit code, valid per-chunk Base64, or complete
+          # marker framing is NOT by itself sufficient evidence: final byte count
+          # and SHA-256 must still match the values obtained from the container.
           base64 --decode "$SOURCE_B64" > "$SOURCE_FILE"
           ACTUAL_BYTES="$(wc -c < "$SOURCE_FILE" | tr -d ' ')"
           ACTUAL_SHA256="$(sha256sum "$SOURCE_FILE" | awk '{print $1}')"
