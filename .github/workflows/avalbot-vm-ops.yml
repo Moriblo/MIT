@@ -540,19 +540,24 @@ jobs:
           SHA256: ${{ steps.discover.outputs.sha256 }}
           GROQ_MODEL: ${{ steps.source.outputs.groq_model }}
         run: |
+          # Runtime-derived values are passed only as printf arguments. The
+          # Markdown format strings are single-quoted so backticks remain
+          # literal Markdown delimiters and can never become Bash command
+          # substitutions. This keeps summary rendering separate from shell
+          # evaluation of the runtime evidence.
           {
-            echo "## AvalBot Runtime Source Verification"
-            echo
-            echo "**Result:** PASSED"
-            echo
-            echo "- Container: `$CONTAINER`"
-            echo "- Running: `true`"
-            echo "- Runtime command: `$CMD_JSON`"
-            echo "- Runtime source: `$RUNTIME_FILE`"
-            echo "- Source bytes: `$BYTES`"
-            echo "- Source SHA-256: `$SHA256`"
-            echo "- Complete source reconstructed and SHA-256 verified: **YES**"
-            echo "- Effective configured GROQ model: `$GROQ_MODEL`"
-            echo
-            echo "> No container environment variables or .env files were read."
+            printf '%s\n' '## AvalBot Runtime Source Verification'
+            printf '\n'
+            printf '%s\n' '**Result:** PASSED'
+            printf '\n'
+            printf -- '- Container: `%s`\n' "$CONTAINER"
+            printf '%s\n' '- Running: `true`'
+            printf -- '- Runtime command: `%s`\n' "$CMD_JSON"
+            printf -- '- Runtime source: `%s`\n' "$RUNTIME_FILE"
+            printf -- '- Source bytes: `%s`\n' "$BYTES"
+            printf -- '- Source SHA-256: `%s`\n' "$SHA256"
+            printf '%s\n' '- Complete source reconstructed and SHA-256 verified: **YES**'
+            printf -- '- Effective configured GROQ model: `%s`\n' "$GROQ_MODEL"
+            printf '\n'
+            printf '%s\n' '> No container environment variables or .env files were read.'
           } >> "$GITHUB_STEP_SUMMARY"
