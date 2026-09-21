@@ -255,6 +255,27 @@ No Azure access token, client secret, SSH private key, Groq API key, Discord tok
 
 ---
 
+## Microsoft Entra Workload Identity
+
+A dedicated Microsoft Entra ID App Registration has been created for the AvalBot GitHub-to-Azure operational channel.
+
+```text
+AZURE_APP_REGISTRATION = github-avalbot-vm-ops
+AZURE_CLIENT_ID        = b9524e82-0bcf-448c-ba4a-c916a9b58aeb
+AZURE_OBJECT_ID        = f603c46d-6ca4-448c-bf0c-821561008c0f
+AZURE_TENANT_ID        = 5fd31207-d439-4a64-96cb-1eb98204656b
+ACCOUNT_TYPE           = Single tenant
+CLIENT_SECRET          = NONE
+```
+
+The application is enabled and no client secret or certificate was created.
+
+At this stage, the App Registration does **not yet have the GitHub federated identity credential defined by this design, and no Azure RBAC authorization for VM operations has yet been granted as part of this operational channel**.
+
+The next governed step is to establish the GitHub Actions → Microsoft Entra ID OIDC trust. Azure RBAC authorization must be treated as a separate subsequent step.
+
+---
+
 ## Change Governance
 
 Changes to the operational scope must be documented before implementation.
