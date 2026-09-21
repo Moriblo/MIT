@@ -1,11 +1,185 @@
-# AvalBot VM — Governed Runtime Source Verification
+# ==============================================================================
+# AvalBot VM — Governed Operations
+# ==============================================================================
 #
-# V1 scope: runtime-source only.
+# PURPOSE
+# -------
+# Provide a governed GitHub Actions entry point for narrowly scoped operational
+# inspection of the Azure VM that hosts AvalBot.
+#
+# V1 implements exactly one operation:
+#
+#   runtime-source
+#
+# The operation answers a production-evidence question:
+#
+#   Which Python source file is configured by the RUNNING AvalBot container,
+#   is the complete source retrieved without truncation, and which literal
+#   GROQ_MODEL value is declared by that verified source?
+#
+# Repository filenames, historical deployment notes, and files merely present
+# on the VM are deliberately NOT accepted as evidence of the active runtime.
+#
+# ==============================================================================
+# GOVERNANCE / HUMAN-IN-THE-LOOP
+# ==============================================================================
+#
 # Human authorization MUST NOT be inferred.
-# This workflow reads the running container's command and runtime Python source.
-# It MUST NOT inspect container environment variables or .env files.
+#
+# Creating, reviewing, committing, registering, discussing, or naming this
+# workflow or its capability does NOT authorize execution.
+#
+# Execution requires an explicit workflow_dispatch event. In the chat-driven
+# path, the governed Dispatcher may materialize that event only after explicit
+# human authorization has been obtained and recorded as a closed capability
+# request in the append-only dispatch ledger.
+#
+# ==============================================================================
+# V1 READ-ONLY OPERATIONAL CONTRACT
+# ==============================================================================
+#
+# "READ-ONLY" describes the intended operational behavior of THIS workflow.
+# It does NOT describe Azure VM Action Run Command itself.
+#
+# Azure Action Run Command is technically capable of executing mutating shell
+# commands. Preserving this workflow's READ-ONLY classification therefore
+# depends on preserving the closed command set implemented below.
+#
+# V1 MUST NOT intentionally:
+#
+#   - stop, start, restart, remove, rebuild, or replace a container;
+#   - create, overwrite, rename, or delete application files;
+#   - install, update, or remove packages;
+#   - change services, system configuration, networking, Azure resources,
+#     Entra configuration, FIC configuration, or Azure RBAC;
+#   - read .env files;
+#   - request Docker Config.Env;
+#   - print or retrieve GROQ_API_KEY, Discord tokens, SSH keys, Azure tokens,
+#     GitHub tokens, client secrets, or other credentials.
+#
+# Adding a mutating command is a governance-boundary change and requires a new
+# explicit human decision; it MUST NOT be treated as a routine V1 edit.
+#
+# ==============================================================================
+# CLOSED-COMMAND / THREAT MODEL
+# ==============================================================================
+#
+# The ledger and workflow input identify an allowlisted capability/operation.
+# They do NOT carry shell commands, file paths, Docker arguments, Azure CLI
+# fragments, URLs, Git refs, or arbitrary remote-command payloads.
+#
+# VM-side commands are defined by this reviewed workflow.
+#
+# In particular, an unrestricted:
+#
+#   docker inspect avalbot
+#
+# MUST NOT replace the targeted Docker queries below. Unrestricted inspect
+# output may contain Config.Env and could persist application secrets in GitHub
+# Actions logs.
+#
+# ==============================================================================
+# EVIDENCE AND INTEGRITY MODEL
+# ==============================================================================
+#
+# The workflow establishes evidence in this order:
+#
+#   running container
+#       -> Docker Config.Cmd
+#       -> configured Python runtime file
+#       -> byte count + SHA-256 calculated inside the container
+#       -> source retrieved in bounded chunks
+#       -> source reconstructed on the GitHub runner
+#       -> byte count + SHA-256 recalculated on the runner
+#       -> integrity equality required
+#       -> literal GROQ_MODEL extracted from the verified source
+#
+# Retrieved source is NOT considered complete source until BOTH the byte count
+# and SHA-256 match the values calculated inside the running container.
+#
+# ==============================================================================
+# AZURE ACTION RUN COMMAND OUTPUT BOUNDARY
+# ==============================================================================
+#
+# Action Run Command responses are bounded. A single large source response can
+# therefore be truncated. V1 avoids treating a truncated response as complete
+# evidence by retrieving the runtime source in small Base64-encoded chunks.
+#
+# Base64 is used only as a transport encoding. It is NOT encryption and is NOT
+# treated as a security control.
+#
+# Each chunk carries an explicit completion marker. The complete reconstructed
+# source is then validated against the VM-side byte count and SHA-256.
+#
+# ==============================================================================
+# LOGGING / DATA MINIMIZATION
+# ==============================================================================
+#
+# The complete source is reconstructed only in temporary files on the
+# GitHub-hosted runner. V1 intentionally does NOT print the complete source to
+# Actions logs and does NOT upload it as an artifact.
+#
+# The Job Summary may contain only the operational evidence required for this
+# verification: container name, running state, runtime command, runtime source
+# path, byte count, SHA-256, integrity result, and configured GROQ model.
+#
+# Temporary runner files are removed by shell traps.
+#
+# ==============================================================================
+# AUTHENTICATION / TRUST BOUNDARY
+# ==============================================================================
+#
+# Authentication uses GitHub OIDC through the GitHub Environment:
+#
+#   avalbot-vm-ops
+#
+# The Environment name is security-significant because it participates in the
+# Microsoft Entra Federated Identity Credential trust relationship.
+#
+# No Azure client secret, SSH private key, password, or certificate is required.
+#
+# Environment secrets:
+#
+#   AZURE_CLIENT_ID
+#   AZURE_TENANT_ID
+#   AZURE_SUBSCRIPTION_ID
+#
+# Environment variables:
+#
+#   AZURE_RESOURCE_GROUP
+#   AZURE_VM_NAME
+#
+# ==============================================================================
+# SUPPLY-CHAIN CONTROL
+# ==============================================================================
+#
+# Third-party GitHub Actions MUST be pinned to an approved full commit SHA.
+# azure/login is therefore pinned below rather than referenced by a floating
+# release tag.
+#
+# ==============================================================================
+# FAILURE SEMANTICS
+# ==============================================================================
+#
+# Fail closed. A failure to authenticate, validate Azure context, identify the
+# running container, identify the Python runtime, retrieve every chunk, verify
+# byte count, verify SHA-256, or parse a literal GROQ_MODEL MUST fail the job.
+#
+# A failure MUST NOT automatically expand Azure RBAC, alter OIDC/FIC, change
+# GitHub Environment protections, retry through an ungoverned path, or mutate
+# production to make the inspection succeed.
+#
+# ==============================================================================
 
 name: AvalBot VM Operations
+
+# ==============================================================================
+# TRIGGER
+# ==============================================================================
+#
+# workflow_dispatch is the only trigger. The choice input is deliberately
+# closed. V1 exposes no free-form command, path, filename, or argument.
+#
 
 on:
   workflow_dispatch:
@@ -17,14 +191,34 @@ on:
         options:
           - runtime-source
 
+# ==============================================================================
+# GITHUB TOKEN PERMISSIONS
+# ==============================================================================
+#
+# id-token: write is required only for OIDC token issuance.
+# contents: none prevents repository-content access by this workflow.
+#
 permissions:
   id-token: write
   contents: none
 
+# ==============================================================================
+# SAFE GLOBAL DEFAULTS
+# ==============================================================================
+#
+# Suppress Azure CLI output by default. Commands that require evidence request
+# only narrowly scoped output explicitly.
+#
 env:
   AZURE_CORE_OUTPUT: none
 
 jobs:
+  # ============================================================================
+  # RUNTIME-SOURCE
+  # ============================================================================
+  #
+  # This job is eligible only for the allowlisted runtime-source operation.
+  #
   runtime-source:
     if: inputs.operation == 'runtime-source'
     name: Verify AvalBot runtime source and Groq model
@@ -33,6 +227,13 @@ jobs:
     timeout-minutes: 15
 
     steps:
+      # =========================================================================
+      # STEP 1 — OIDC AUTHENTICATION
+      # =========================================================================
+      #
+      # Authenticate without a long-lived Azure credential. The action is pinned
+      # to the approved full SHA to reduce dependency supply-chain drift.
+      #
       - name: Authenticate to Azure using GitHub OIDC
         uses: azure/login@532459ea530d8321f2fb9bb10d1e0bcf23869a43 # Azure/login v3.0.0
         with:
@@ -40,6 +241,14 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
+      # =========================================================================
+      # STEP 2 — AUTHENTICATED CONTEXT VALIDATION
+      # =========================================================================
+      #
+      # Successful login alone is insufficient. Require the selected Azure
+      # subscription and tenant to match the governed Environment configuration.
+      # Expected identifiers are compared but not deliberately printed.
+      #
       - name: Validate authenticated Azure context
         shell: bash
         env:
@@ -53,6 +262,16 @@ jobs:
           [[ "$ACTUAL_TENANT_ID" == "$EXPECTED_TENANT_ID" ]] || { echo "::error::Unexpected Azure tenant."; exit 1; }
           echo "Azure authentication context validated."
 
+      # =========================================================================
+      # STEP 3 — DISCOVER THE PRODUCTION RUNTIME
+      # =========================================================================
+      #
+      # Source-of-truth rule:
+      #   derive the Python filename from the RUNNING container's Config.Cmd.
+      #
+      # Do not infer the runtime from GitHub, historical Dockerfiles, or filenames
+      # merely present on disk. The container name is fixed as "avalbot".
+      #
       - name: Discover running AvalBot runtime source
         id: discover
         shell: bash
@@ -62,9 +281,25 @@ jobs:
         run: |
           set -euo pipefail
 
-          # Closed VM-side script. No workflow input is interpolated into it.
-          # docker inspect is deliberately restricted to State.Running and
-          # Config.Cmd; Config.Env is never requested.
+          # ----------------------------------------------------------------------
+          # VM-SIDE DISCOVERY CONTRACT
+          # ----------------------------------------------------------------------
+          #
+          # This heredoc is a closed, reviewed payload. No workflow input,
+          # ledger text, repository content, or user-provided shell fragment is
+          # interpolated into it.
+          #
+          # Docker inspection is intentionally limited to:
+          #
+          #   State.Running
+          #   Config.Cmd
+          #
+          # Config.Env is never requested. This prevents routine runtime
+          # inspection from becoming a credential-disclosure path.
+          #
+          # The script verifies that the derived Python file exists inside the
+          # running container before calculating its byte count and SHA-256.
+          # These VM-side values become the integrity baseline for reconstruction.
           read -r -d '' VM_SCRIPT <<'VM_SCRIPT' || true
           set -eu
           CONTAINER='avalbot'
@@ -96,6 +331,8 @@ jobs:
           printf 'AVALBOT_RUNTIME_END\n'
           VM_SCRIPT
 
+          # Capture Azure CLI stdout/stderr separately. stdout is treated as a
+          # structured evidence channel; stderr is emitted only on failure.
           OUT="$(mktemp)"
           ERR="$(mktemp)"
           trap 'rm -f "$OUT" "$ERR"' EXIT
@@ -111,6 +348,9 @@ jobs:
             exit "$RC"
           fi
 
+          # Require explicit begin/end markers before trusting returned metadata.
+          # This guards against silently accepting an incomplete Run Command
+          # response as a complete discovery result.
           BLOCK="$(sed -n '/AVALBOT_RUNTIME_BEGIN/,/AVALBOT_RUNTIME_END/p' "$OUT")"
           grep -Fq 'AVALBOT_RUNTIME_END' <<<"$BLOCK" || { echo "::error::Incomplete runtime metadata response."; exit 1; }
 
@@ -125,6 +365,7 @@ jobs:
           [[ "$BYTES" =~ ^[0-9]+$ ]] || { echo "::error::Invalid source byte count."; exit 1; }
           [[ "$SHA256" =~ ^[0-9a-f]{64}$ ]] || { echo "::error::Invalid source SHA-256."; exit 1; }
 
+          # Expose only validated, non-secret metadata to later workflow steps.
           {
             echo "container=$CONTAINER"
             echo "cmd_json=$CMD_JSON"
@@ -135,6 +376,16 @@ jobs:
 
           echo "Running AvalBot container and runtime Python file identified."
 
+      # =========================================================================
+      # STEP 4 — RETRIEVE AND VERIFY THE COMPLETE RUNTIME SOURCE
+      # =========================================================================
+      #
+      # A source file may exceed the practical Run Command response boundary.
+      # Retrieve it in bounded chunks and reconstruct it on the runner.
+      #
+      # The reconstructed file is trusted only after BOTH byte count and SHA-256
+      # equal the values calculated inside the running container in Step 3.
+      #
       - name: Retrieve complete runtime source with SHA-256 verification
         id: source
         shell: bash
@@ -147,8 +398,13 @@ jobs:
         run: |
           set -euo pipefail
 
-          # Keep each Action Run Command response comfortably below Azure's
-          # output ceiling. Base64 is used only as a transport encoding.
+          # CHUNK_BYTES intentionally leaves headroom for Azure Run Command
+          # framing/diagnostic text. Increasing it is not a performance-only
+          # change: it can weaken truncation resilience and must be reviewed.
+          #
+          # Base64 preserves arbitrary source bytes across the text response
+          # channel. It provides no confidentiality.
+          #
           CHUNK_BYTES=1800
           SOURCE_B64="$(mktemp)"
           SOURCE_FILE="$(mktemp)"
@@ -162,8 +418,13 @@ jobs:
               COUNT=$((EXPECTED_BYTES - OFFSET))
             fi
 
-            # OFFSET/COUNT are runner-calculated integers; RUNTIME_FILE was
-            # discovered from the fixed container's Config.Cmd, not user input.
+            # OFFSET and COUNT are arithmetic values calculated by this runner.
+            # RUNTIME_FILE was derived from the fixed running container's
+            # Config.Cmd. None of these values originates in workflow_dispatch.
+            #
+            # dd reads bytes only. No file is created or modified in the VM.
+            # A completion marker is appended outside the source stream so the
+            # runner can reject an incomplete response.
             VM_SCRIPT="docker exec avalbot dd if='$RUNTIME_FILE' bs=1 skip=$OFFSET count=$COUNT status=none | base64 -w0; printf '\nAVALBOT_CHUNK_END\n'"
 
             OUT="$(mktemp)"
@@ -186,6 +447,8 @@ jobs:
             OFFSET=$((OFFSET + COUNT))
           done
 
+          # Reconstruct locally, then independently recalculate integrity data.
+          # A successful Azure CLI exit code is NOT sufficient evidence.
           base64 --decode "$SOURCE_B64" > "$SOURCE_FILE"
           ACTUAL_BYTES="$(wc -c < "$SOURCE_FILE" | tr -d ' ')"
           ACTUAL_SHA256="$(sha256sum "$SOURCE_FILE" | awk '{print $1}')"
@@ -193,8 +456,16 @@ jobs:
           [[ "$ACTUAL_BYTES" == "$EXPECTED_BYTES" ]] || { echo "::error::Reconstructed source byte count mismatch."; exit 1; }
           [[ "$ACTUAL_SHA256" == "$EXPECTED_SHA256" ]] || { echo "::error::Reconstructed source SHA-256 mismatch."; exit 1; }
 
-          # Extract only literal GROQ_MODEL assignments from the verified source.
-          # Do not print the complete source into Actions logs.
+          # Only after integrity verification do we inspect GROQ_MODEL.
+          #
+          # V1 accepts a literal quoted assignment such as:
+          #
+          #   GROQ_MODEL = "model-name"
+          #
+          # Dynamic expressions, environment-derived values, or an absent
+          # assignment fail closed rather than being guessed.
+          #
+          # The complete source is intentionally NOT printed to Actions logs.
           MODEL_LINE="$(grep -E '^[[:space:]]*GROQ_MODEL[[:space:]]*=' "$SOURCE_FILE" | tail -n 1 || true)"
           [[ -n "$MODEL_LINE" ]] || { echo "::error::No GROQ_MODEL assignment found in verified runtime source."; exit 1; }
 
@@ -205,6 +476,20 @@ jobs:
           echo "Verified runtime source reconstructed successfully."
           echo "Effective configured GROQ model: $MODEL"
 
+      # =========================================================================
+      # STEP 5 — RECORD MINIMIZED, NON-SECRET EVIDENCE
+      # =========================================================================
+      #
+      # Record the facts required to answer the operational question without
+      # persisting the complete source or application credentials.
+      #
+      # PASSED means:
+      #   - the target container was running;
+      #   - its Config.Cmd identified a Python runtime file;
+      #   - that file existed inside the container;
+      #   - complete source reconstruction matched byte count and SHA-256;
+      #   - a supported literal GROQ_MODEL assignment was found.
+      #
       - name: Record runtime verification result
         shell: bash
         env:
