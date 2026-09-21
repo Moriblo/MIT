@@ -88,7 +88,7 @@ environment: avalbot-vm-ops
 target: Azure VM vm-avalbot
 ```
 
-Approved operations:
+Approved conceptual operations:
 
 ```text
 status
@@ -97,18 +97,28 @@ runtime-source
 logs
 ```
 
-The workflow input MUST use a closed choice model equivalent to:
+Current executable implementation:
+
+```text
+runtime-source: ENABLED
+status: NOT YET IMPLEMENTED
+container-inspect: NOT YET IMPLEMENTED
+logs: NOT YET IMPLEMENTED
+```
+
+Only `runtime-source` is currently exposed by the workflow choice input. Conceptual approval does not mean implementation or execution eligibility.
+
+The workflow input MUST use a closed choice model. Its current implemented allowlist is:
 
 ```yaml
 operation:
   type: choice
   required: true
   options:
-    - status
-    - container-inspect
     - runtime-source
-    - logs
 ```
+
+Additional conceptual operations may be added only through a governed workflow change.
 
 Arbitrary shell input is prohibited.
 
@@ -125,6 +135,16 @@ Explicit human authorization
       |
       v
 workflow_dispatch
+```
+
+Chat dispatch mapping for the implemented operation:
+
+```text
+capability_id: avalbot-vm-runtime-source
+workflow: .github/workflows/avalbot-vm-ops.yml
+ref: main
+input: operation=runtime-source
+ledger: .github/workflow-dispatch/commands.log
 ```
 
 Expected production modification: `NONE`
