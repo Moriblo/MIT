@@ -3,3 +3,4 @@
 # No execution request is recorded by this infrastructure-creation commit.
 REQ-000001;avalbot-oidc-rbac-smoke-test
 REQ-000002;avalbot-oidc-rbac-smoke-test
+REQ-000003;avalbot-vm-runtime-source
