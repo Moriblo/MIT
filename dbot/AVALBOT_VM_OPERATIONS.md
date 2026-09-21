@@ -319,6 +319,123 @@ repo:Moriblo/MIT:environment:avalbot-vm-ops
 
 ---
 
+## Human Dispatch and V1 Authorization Model
+
+Version 1 uses `workflow_dispatch` as its explicit human-trigger mechanism.
+
+The human authorization may be materialized through the GitHub UI or through an approved conversational interface capable of dispatching the registered workflow.
+
+```text
+Human authorization
+        |
+        +---- GitHub UI --------+
+        |                       |
+        +---- Chat interface ---+
+                                |
+                                v
+                         workflow_dispatch
+                                |
+                                v
+                       avalbot-vm-ops.yml
+```
+
+When the Chat interface is used, the intended interaction is:
+
+```text
+Human
+  |
+  | requests an operation
+  v
+dbot ChatGPT
+  |
+  | presents operation and scope
+  v
+Human
+  |
+  | explicit authorization
+  v
+GitHub workflow_dispatch
+  |
+  | operation=<approved closed choice>
+  | ref=main
+  v
+avalbot-vm-ops.yml
+```
+
+Human authorization MUST NOT be inferred from the request to investigate, discuss, prepare, or explain an operation.
+
+### V1 Operational Chain
+
+```text
+Human
+  |
+  v
+workflow_dispatch
+[explicit HITL]
+  |
+  v
+avalbot-vm-ops.yml
+[V1: closed READ-ONLY operations]
+  |
+  v
+branch: main
+  |
+  v
+Environment: avalbot-vm-ops
+[identity boundary]
+  |
+  v
+GitHub OIDC
+  |
+  v
+Federated Identity Credential
+  |
+  v
+github-avalbot-vm-ops
+  |
+  v
+Minimum required Azure RBAC
+  |
+  v
+Azure Action Run Command
+  |
+  v
+vm-avalbot
+```
+
+The READ-ONLY classification belongs to the operational contract implemented by `avalbot-vm-ops.yml`.
+
+The GitHub Environment, OIDC, Federated Identity Credential, Azure RBAC, and Azure Action Run Command are NOT inherently READ-ONLY.
+
+### GitHub Environment Role
+
+For Version 1, the `avalbot-vm-ops` GitHub Environment is an identity boundary for the OIDC trust.
+
+`workflow_dispatch` provides the explicit human trigger for the approved READ-ONLY operations.
+
+Version 1 does not require a second approval through Environment Required Reviewers.
+
+The Environment SHOULD restrict eligible deployment branches/tags according to the approved V1 branch policy.
+
+### WRITE Evolution Rule
+
+Any future WRITE operation requires a new explicit governance/HITL decision before it can be introduced as an executable capability.
+
+That decision MUST separately evaluate stronger protection mechanisms, including:
+
+- mandatory Environment reviewers;
+- segregation of duties;
+- a dedicated production-change GitHub Environment;
+- minimum required permissions;
+- validation;
+- rollback;
+- failure handling;
+- secret protection.
+
+Authorization of the V1 READ-ONLY workflow MUST NOT be interpreted as authorization for any future WRITE operation.
+
+---
+
 ## Change Governance
 
 Changes to the operational scope must be documented before implementation.
@@ -341,6 +458,10 @@ The operational workflow must remain auditable through GitHub version history.
 
 **Phase:** Initial design  
 **Operational mode:** READ-ONLY  
+**Human trigger:** `workflow_dispatch`  
+**GitHub Environment:** `avalbot-vm-ops` — created; protection configuration pending  
+**Operation catalog:** `dbot/DBOT_OPERATION_CATALOG.md`  
+**Operational persona:** `dbot/PERSONA_dbot_ChatGPT_v1.0.md`  
 **Production modifications:** None  
 **SSH dependency:** None  
 **Permanent Azure-side operational script:** None initially  
