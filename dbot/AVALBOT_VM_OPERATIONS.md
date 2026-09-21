@@ -238,6 +238,23 @@ No production-changing capability is part of Version 1.
 
 ---
 
+## Azure Target Configuration
+
+The Version 1 operational channel targets the following Azure resources, confirmed directly in the Azure Portal:
+
+```text
+AZURE_TENANT_ID       = 5fd31207-d439-4a64-96cb-1eb98204656b
+AZURE_SUBSCRIPTION_ID = 1c122157-db37-42f0-8c57-9e2ce43ebd36
+AZURE_RESOURCE_GROUP  = rg-avalbot
+AZURE_VM_NAME         = vm-avalbot
+```
+
+These values are resource and directory identifiers, not authentication credentials.
+
+No Azure access token, client secret, SSH private key, Groq API key, Discord token, or other secret may be stored in this document.
+
+---
+
 ## Change Governance
 
 Changes to the operational scope must be documented before implementation.
