@@ -81,6 +81,12 @@ jobs:
             avalbot-oidc-rbac-smoke-test)
               workflow="avalbot-vm-oidc-rbac-smoke-test.yml"
               ref="main"
+              inputs=""
+              ;;
+            avalbot-vm-runtime-source)
+              workflow="avalbot-vm-ops.yml"
+              ref="main"
+              inputs="operation=runtime-source"
               ;;
             *)
               echo "::error::Capability is not registered in the V1 allowlist."
@@ -93,6 +99,7 @@ jobs:
           echo "capability_id=$capability_id" >> "$GITHUB_OUTPUT"
           echo "workflow=$workflow" >> "$GITHUB_OUTPUT"
           echo "ref=$ref" >> "$GITHUB_OUTPUT"
+          echo "inputs=$inputs" >> "$GITHUB_OUTPUT"
 
       - name: Dispatch registered workflow
         if: steps.request.outputs.dispatch == 'true'
@@ -100,10 +107,15 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           TARGET_WORKFLOW: ${{ steps.request.outputs.workflow }}
           TARGET_REF: ${{ steps.request.outputs.ref }}
+          TARGET_INPUTS: ${{ steps.request.outputs.inputs }}
         shell: bash
         run: |
           set -euo pipefail
-          gh workflow run "$TARGET_WORKFLOW" --ref "$TARGET_REF"
+          if [[ -n "$TARGET_INPUTS" ]]; then
+            gh workflow run "$TARGET_WORKFLOW" --ref "$TARGET_REF" -f "$TARGET_INPUTS"
+          else
+            gh workflow run "$TARGET_WORKFLOW" --ref "$TARGET_REF"
+          fi
 
       - name: Record dispatcher result
         if: steps.request.outputs.dispatch == 'true'
