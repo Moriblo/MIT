@@ -318,7 +318,11 @@ jobs:
 
           docker exec "$CONTAINER" test -f "$CONTAINER_FILE" || { echo 'ERROR: runtime Python file does not exist in container' >&2; exit 22; }
 
-          BYTES="$(docker exec "$CONTAINER" wc -c < "$CONTAINER_FILE" | tr -d ' ')"
+          # CONTAINER_FILE is a container-local path. The file MUST therefore
+          # be opened by the command executed inside the container. Do not use
+          # host-shell input redirection (for example: < "$CONTAINER_FILE"),
+          # because that would make the VM host shell try to open the path.
+          BYTES="$(docker exec "$CONTAINER" wc -c "$CONTAINER_FILE" | awk '{print $1}')"
           SHA256="$(docker exec "$CONTAINER" sha256sum "$CONTAINER_FILE" | awk '{print $1}')"
 
           printf 'AVALBOT_RUNTIME_BEGIN\n'
