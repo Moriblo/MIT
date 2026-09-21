@@ -276,6 +276,49 @@ The next governed step is to establish the GitHub Actions → Microsoft Entra ID
 
 ---
 
+## Approved GitHub-to-Azure OIDC Architecture
+
+The Version 1 GitHub-to-Azure operational authentication and authorization path is approved as follows:
+
+```text
+workflow_dispatch
+       |
+       v
+GitHub Environment: avalbot-vm-ops
+       |
+       v
+GitHub OIDC
+       |
+       v
+Federated Identity Credential
+       |
+       v
+Microsoft Entra App Registration:
+github-avalbot-vm-ops
+       |
+       v
+Minimum required Azure RBAC
+       |
+       v
+vm-avalbot
+```
+
+The intended federated identity subject for the GitHub Environment context is:
+
+```text
+repo:Moriblo/MIT:environment:avalbot-vm-ops
+```
+
+### Governance Boundaries
+
+- `workflow_dispatch` is the human-trigger mechanism for Version 1. The operational workflow must not be automatically triggered by `push`, `pull_request`, scheduled execution, or other automatic repository events.
+- The GitHub Environment defines the GitHub/OIDC execution context. It does not itself grant Azure authorization.
+- The Federated Identity Credential establishes trust between the approved GitHub identity context and the Microsoft Entra App Registration. It does not itself define the operations permitted against the VM.
+- Azure RBAC is a separate authorization layer and must grant only the minimum permissions required for the approved READ-ONLY operational scope.
+- Creation of the GitHub Environment, creation of the Federated Identity Credential, and assignment of Azure RBAC permissions remain separate implementation steps subject to their applicable HITL checkpoints.
+
+---
+
 ## Change Governance
 
 Changes to the operational scope must be documented before implementation.
