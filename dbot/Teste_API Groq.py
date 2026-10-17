@@ -1,3 +1,4 @@
+import os
 import urllib.request
 import urllib.error
 import json
@@ -7,7 +8,7 @@ import time
 # CONFIGURAÇÃO
 # ============================================================
 
-API_KEY = "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"
+API_KEY = os.getenv("GROQ_API_KEY")  # defina GROQ_API_KEY no ambiente; nunca grave a chave no codigo
 
 URL = "https://api.groq.com/openai/v1/chat/completions"
 
